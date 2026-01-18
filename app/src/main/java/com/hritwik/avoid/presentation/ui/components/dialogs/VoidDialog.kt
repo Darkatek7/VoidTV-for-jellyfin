@@ -1,5 +1,6 @@
 package com.hritwik.avoid.presentation.ui.components.dialogs
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.hritwik.avoid.presentation.ui.theme.Minsk
@@ -48,6 +54,8 @@ fun VoidAlertDialog(
     content: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     if (!visible) return
+
+    BackHandler(onBack = onDismissRequest)
 
     AlertDialog(
         icon = icon?.let {
@@ -97,7 +105,15 @@ fun VoidAlertDialog(
                 color = Minsk,
                 shape = RoundedCornerShape(24.dp)
             )
-            .clip(MaterialTheme.shapes.medium),
+            .clip(MaterialTheme.shapes.medium)
+            .onPreviewKeyEvent { event ->
+                if (event.key == Key.Back && event.type == KeyEventType.KeyDown) {
+                    onDismissRequest()
+                    true
+                } else {
+                    false
+                }
+            },
         onDismissRequest = onDismissRequest,
         confirmButton = {
             if (confirmButton != null) confirmButton()

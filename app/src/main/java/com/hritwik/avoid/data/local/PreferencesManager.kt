@@ -104,6 +104,8 @@ class PreferencesManager @Inject constructor(
         private val HIGH_CONTRAST = booleanPreferencesKey(PreferenceConstants.KEY_HIGH_CONTRAST)
         private val FIRST_RUN_COMPLETED = booleanPreferencesKey(PreferenceConstants.KEY_FIRST_RUN_COMPLETED)
         private val RECENT_SEARCHES = stringPreferencesKey(PreferenceConstants.KEY_RECENT_SEARCHES)
+        private val TMDB_ENABLED = booleanPreferencesKey(PreferenceConstants.KEY_TMDB_ENABLED)
+        private val TMDB_API_KEY = stringPreferencesKey(PreferenceConstants.KEY_TMDB_API_KEY)
 
         
         private val AUTO_PLAY = booleanPreferencesKey(PreferenceConstants.KEY_AUTO_PLAY)
@@ -132,6 +134,8 @@ class PreferencesManager @Inject constructor(
         private val EXTERNAL_PLAYER_ENABLED = booleanPreferencesKey(PreferenceConstants.KEY_EXTERNAL_PLAYER_ENABLED)
         private val AUDIO_PASSTHROUGH_ENABLED = booleanPreferencesKey(PreferenceConstants.KEY_AUDIO_PASSTHROUGH_ENABLED)
         private val DIRECT_PLAY_ENABLED = booleanPreferencesKey(PreferenceConstants.KEY_DIRECT_PLAY_ENABLED)
+        private val FRAME_RATE_SWITCH_ENABLED =
+            booleanPreferencesKey(PreferenceConstants.KEY_FRAME_RATE_SWITCH_ENABLED)
         private val PREFER_HDR_OVER_DV = booleanPreferencesKey(PreferenceConstants.KEY_PREFER_HDR_OVER_DV)
         private val HDR_FORMAT_PREFERENCE = stringPreferencesKey(PreferenceConstants.KEY_HDR_FORMAT_PREFERENCE)
 
@@ -190,6 +194,14 @@ class PreferencesManager @Inject constructor(
 
     fun getPreferredLanguage(): Flow<String> = dataStore.data.map { prefs ->
         prefs[PREFERRED_LANGUAGE] ?: PreferenceConstants.DEFAULT_PREFERRED_LANGUAGE
+    }
+
+    fun getTmdbEnabled(): Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[TMDB_ENABLED] ?: PreferenceConstants.DEFAULT_TMDB_ENABLED
+    }
+
+    fun getTmdbApiKey(): Flow<String> = dataStore.data.map { prefs ->
+        prefs[TMDB_API_KEY] ?: PreferenceConstants.DEFAULT_TMDB_API_KEY
     }
 
     fun getGestureControlsEnabled(): Flow<Boolean> = dataStore.data.map { prefs ->
@@ -287,6 +299,10 @@ class PreferencesManager @Inject constructor(
             if (!preferences.contains(DIRECT_PLAY_ENABLED)) {
                 preferences[DIRECT_PLAY_ENABLED] = PreferenceConstants.DEFAULT_DIRECT_PLAY_ENABLED
             }
+            if (!preferences.contains(FRAME_RATE_SWITCH_ENABLED)) {
+                preferences[FRAME_RATE_SWITCH_ENABLED] =
+                    PreferenceConstants.DEFAULT_FRAME_RATE_SWITCH_ENABLED
+            }
             if (!preferences.contains(PREFER_HDR_OVER_DV)) {
                 preferences[PREFER_HDR_OVER_DV] = preferHdrOverDolbyVisionDefault
             }
@@ -324,6 +340,14 @@ class PreferencesManager @Inject constructor(
 
     suspend fun savePreferredLanguage(language: String) {
         dataStore.edit { it[PREFERRED_LANGUAGE] = language }
+    }
+
+    suspend fun saveTmdbEnabled(enabled: Boolean) {
+        dataStore.edit { it[TMDB_ENABLED] = enabled }
+    }
+
+    suspend fun saveTmdbApiKey(apiKey: String) {
+        dataStore.edit { it[TMDB_API_KEY] = apiKey }
     }
 
     suspend fun saveGestureControlsEnabled(enabled: Boolean) {
@@ -745,6 +769,11 @@ class PreferencesManager @Inject constructor(
         preferences[DIRECT_PLAY_ENABLED] ?: PreferenceConstants.DEFAULT_DIRECT_PLAY_ENABLED
     }
 
+    fun getFrameRateSwitchEnabled(): Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[FRAME_RATE_SWITCH_ENABLED]
+            ?: PreferenceConstants.DEFAULT_FRAME_RATE_SWITCH_ENABLED
+    }
+
     fun getPreferHdrOverDolbyVision(): Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[PREFER_HDR_OVER_DV] ?: preferHdrOverDolbyVisionDefault
     }
@@ -940,6 +969,12 @@ class PreferencesManager @Inject constructor(
     suspend fun saveDirectPlayEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[DIRECT_PLAY_ENABLED] = enabled
+        }
+    }
+
+    suspend fun saveFrameRateSwitchEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[FRAME_RATE_SWITCH_ENABLED] = enabled
         }
     }
 

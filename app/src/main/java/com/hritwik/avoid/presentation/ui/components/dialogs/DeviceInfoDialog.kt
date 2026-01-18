@@ -25,16 +25,20 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import com.hritwik.avoid.utils.helpers.CodecDetector
+import com.hritwik.avoid.utils.helpers.FrameRateHelper
 import com.hritwik.avoid.utils.helpers.calculateRoundedValue
 import com.hritwik.avoid.utils.helpers.getDeviceName
 import ir.kaaveh.sdpcompose.sdp
+import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -42,8 +46,15 @@ fun DeviceInfoDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val deviceInfo = remember { CodecDetector.getDeviceCodecInfo(context) }
     val deviceName = remember { getDeviceName(context) }
+    val displayModes = remember { FrameRateHelper.getDisplayModes(view) }
+    val currentRefreshRate = remember { FrameRateHelper.getDisplayRefreshRate(view) }
+
+    LaunchedEffect(view) {
+        FrameRateHelper.logDisplayModes(view)
+    }
 
     VoidAlertDialog(
         visible = true,
@@ -67,6 +78,47 @@ fun DeviceInfoDialog(
                     .heightIn(max = calculateRoundedValue(600).sdp),
                 verticalArrangement = Arrangement.spacedBy(calculateRoundedValue(16).sdp)
             ) {
+                item {
+                    InfoSection(title = "Display Modes") {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(calculateRoundedValue(8).sdp)
+                        ) {
+                            val currentLabel = currentRefreshRate?.let {
+                                String.format(Locale.US, "%s hz", it.toString())
+                            } ?: "Unknown"
+                            Text(
+                                text = "Current refresh rate: $currentLabel",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                            )
+                            if (displayModes.isEmpty()) {
+                                Text(
+                                    text = "No display modes reported",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            } else {
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(calculateRoundedValue(8).sdp),
+                                    verticalArrangement = Arrangement.spacedBy(calculateRoundedValue(8).sdp)
+                                ) {
+                                    displayModes.forEach { mode ->
+                                        val label = String.format(
+                                            Locale.US,
+                                            "%dx%d @ %s hz (id %d)",
+                                            mode.width,
+                                            mode.height,
+                                            mode.refreshRate.toString(),
+                                            mode.modeId
+                                        )
+                                        CodecChip(text = label)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 item {
                     InfoSection(title = "HDR Capabilities") {
                         Column(

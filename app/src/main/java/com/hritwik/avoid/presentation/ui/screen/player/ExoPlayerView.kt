@@ -55,6 +55,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.C
 import androidx.media3.common.Format
+import androidx.media3.common.Metadata
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
@@ -75,8 +77,11 @@ import androidx.media3.exoplayer.text.TextRenderer
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ffmpeg.FfmpegFilteringMode
+import androidx.media3.extractor.metadata.id3.ChapterFrame
+import androidx.media3.extractor.metadata.id3.TextInformationFrame
 import androidx.media3.extractor.text.SubtitleDecoder
 import androidx.media3.extractor.text.SubtitleInputBuffer
+import com.hritwik.avoid.domain.model.playback.Segment
 import androidx.media3.extractor.text.SubtitleOutputBuffer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.CaptionStyleCompat
@@ -132,6 +137,7 @@ fun ExoPlayerView(
     playerState: VideoPlaybackState,
     decoderMode: DecoderMode,
     displayMode: DisplayMode,
+    frameRateSwitchEnabled: Boolean,
     userId: String,
     accessToken: String,
     serverUrl: String,
@@ -159,8 +165,10 @@ fun ExoPlayerView(
     var gestureFeedback by remember { mutableStateOf<GestureFeedback?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
     var exoPlayerRef by remember { mutableStateOf<ExoPlayer?>(null) }
-    var lastAppliedFrameRate by remember { mutableStateOf<Float?>(null) }
-    val contentFrameRate = playerState.playbackOptions.selectedVideoStream?.frameRate
+    var lastAppliedSwitchKey by remember { mutableStateOf<FrameRateHelper.DisplaySwitchKey?>(null) }
+    var originalDisplayModeId by remember { mutableStateOf<Int?>(null) }
+    val selectedVideoStream = playerState.playbackOptions.selectedVideoStream
+    val contentFrameRate = selectedVideoStream?.frameRate
     val window = activity?.window
     var brightness by remember {
         mutableFloatStateOf(window?.attributes?.screenBrightness?.takeIf { it >= 0 } ?: 0.5f)
@@ -528,6 +536,7 @@ fun ExoPlayerView(
             val filteringMode = when (effectiveHdrPreference) {
                 HdrFormatPreference.HDR10_PLUS -> FfmpegFilteringMode.KEEP_HDR10_BASE
                 HdrFormatPreference.DOLBY_VISION -> FfmpegFilteringMode.KEEP_DOLBY_VISION
+                HdrFormatPreference.DOLBY_VISION_MEL -> FfmpegFilteringMode.KEEP_DOLBY_VISION_MEL
                 else -> FfmpegFilteringMode.AUTO
             }
             val extractorsFactory = FilteringExtractorsFactory(DefaultExtractorsFactory(), filteringMode)
@@ -668,6 +677,37 @@ fun ExoPlayerView(
                 pendingTrackChangeEvent = null
             }
 
+            val introChapterRegex = remember {
+                Regex("(?i)(Opening Credits|intro|opening|^OP$)")
+            }
+            val outroChapterRegex = remember {
+                Regex("(?i)(outro|closing|ending|^ED$)")
+            }
+            val creditsChapterRegex = remember {
+                Regex("(?i)(End Credits)")
+            }
+
+            fun chapterTitleToSegmentType(title: String?): String? {
+                val normalized = title?.trim().orEmpty()
+                if (normalized.isEmpty()) return null
+                return when {
+                    creditsChapterRegex.containsMatchIn(normalized) -> "Credits"
+                    outroChapterRegex.containsMatchIn(normalized) -> "Outro"
+                    introChapterRegex.containsMatchIn(normalized) -> "Intro"
+                    else -> null
+                }
+            }
+
+            fun extractChapterTitle(frame: ChapterFrame): String? {
+                for (i in 0 until frame.subFrameCount) {
+                    val subFrame = frame.getSubFrame(i)
+                    if (subFrame is TextInformationFrame && subFrame.id.equals("TIT2", true)) {
+                        return subFrame.value
+                    }
+                }
+                return null
+            }
+
             val playbackListener = remember(exoPlayer) {
                 object : Player.Listener {
                     override fun onPlaybackStateChanged(state: Int) {
@@ -699,6 +739,44 @@ fun ExoPlayerView(
                         isPlaying = isPlayingState
                         viewModel.updatePausedState(!isPlayingState)
                     }
+
+                    override fun onMetadata(metadata: Metadata) {
+                        if (viewModel.state.value.segments.isNotEmpty()) {
+                            Log.i("ChapterFallback", "Skipping chapter fallback; segments already set")
+                            return
+                        }
+                        val chapterSegments = mutableListOf<Segment>()
+                        var chapterCount = 0
+                        for (i in 0 until metadata.length()) {
+                            val entry = metadata[i]
+                            if (entry is ChapterFrame) {
+                                chapterCount++
+                                val title = extractChapterTitle(entry)
+                                val type = chapterTitleToSegmentType(title) ?: continue
+                                val startMs = entry.startTimeMs.toLong()
+                                val endMs = entry.endTimeMs.toLong()
+                                if (startMs < 0 || endMs <= startMs) continue
+                                chapterSegments.add(
+                                    Segment(
+                                        id = "chapter-${entry.chapterId}",
+                                        startPositionTicks = startMs * 10_000L,
+                                        endPositionTicks = endMs * 10_000L,
+                                        type = type
+                                    )
+                                )
+                            }
+                        }
+                        if (chapterSegments.isNotEmpty()) {
+                            Log.i(
+                                "ChapterFallback",
+                                "Applying chapters=$chapterCount mappedSegments=${chapterSegments.size}"
+                            )
+                            viewModel.applyChapterSegments(chapterSegments)
+                            viewModel.updatePlaybackPosition(exoPlayer.currentPosition)
+                        } else if (chapterCount > 0) {
+                            Log.i("ChapterFallback", "Chapters present but no intro/outro matches")
+                        }
+                    }
                 }
             }
 
@@ -706,15 +784,68 @@ fun ExoPlayerView(
 
             LaunchedEffect(playerView, contentFrameRate) {
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return@LaunchedEffect
-                val rate = contentFrameRate?.takeIf { it > 0f } ?: return@LaunchedEffect
-                if (lastAppliedFrameRate == rate) return@LaunchedEffect
-                val applied = FrameRateHelper.requestFrameRate(
+                if (!frameRateSwitchEnabled) return@LaunchedEffect
+                val rate = contentFrameRate?.takeIf { it.isFinite() && it > 0f } ?: return@LaunchedEffect
+                val switchKey = FrameRateHelper.DisplaySwitchKey(
+                    rate = rate,
+                    width = selectedVideoStream?.width,
+                    height = selectedVideoStream?.height
+                )
+                if (lastAppliedSwitchKey == switchKey) return@LaunchedEffect
+                val display = playerView?.display
+                if (originalDisplayModeId == null) {
+                    originalDisplayModeId = display?.mode?.modeId
+                }
+                val displayMode = display?.let {
+                    FrameRateHelper.selectBestDisplayMode(
+                        display = it,
+                        streamWidth = selectedVideoStream?.width,
+                        streamHeight = selectedVideoStream?.height,
+                        targetRate = rate,
+                        preferExactResolution = true
+                    )
+                }
+                val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as? android.hardware.display.DisplayManager
+                val preferredApplied = if (displayMode != null && display != null && activity?.window != null && displayManager != null) {
+                    FrameRateHelper.requestPreferredDisplayMode(
+                        window = activity.window,
+                        displayManager = displayManager,
+                        displayId = display.displayId,
+                        modeId = displayMode.modeId
+                    )
+                } else {
+                    false
+                }
+                val applied = preferredApplied || FrameRateHelper.requestFrameRate(
                     surfaceProvider = { playerView?.videoSurfaceView as? SurfaceView },
                     frameRate = rate
                 )
                 if (applied) {
-                    lastAppliedFrameRate = rate
-                    FrameRateHelper.showFrameRateToast(context, rate)
+                    lastAppliedSwitchKey = switchKey
+                    val verification = FrameRateHelper.verifyFrameRate(
+                        viewProvider = { playerView },
+                        targetRate = rate
+                    )
+                    val modeMatched = display?.mode?.modeId == displayMode?.modeId
+                    val resolutionLabel = displayMode?.let { "${it.physicalWidth}x${it.physicalHeight}" }
+                    FrameRateHelper.showFrameRateToast(
+                        context = context,
+                        currentRate = verification.currentRate ?: rate,
+                        requestedRate = rate,
+                        verified = verification.matched,
+                        modeMatched = modeMatched && !verification.matched,
+                        resolutionLabel = resolutionLabel
+                    )
+                }
+            }
+
+            DisposableEffect(activity?.window) {
+                onDispose {
+                    val modeId = originalDisplayModeId
+                    val currentWindow = activity?.window
+                    if (currentWindow != null && modeId != null) {
+                        FrameRateHelper.setPreferredDisplayMode(currentWindow, modeId)
+                    }
                 }
             }
 
@@ -1325,6 +1456,7 @@ private fun createRenderersFactory(
     val filteringMode = when (hdrFormatPreference) {
         HdrFormatPreference.HDR10_PLUS -> FfmpegFilteringMode.KEEP_HDR10_BASE
         HdrFormatPreference.DOLBY_VISION -> FfmpegFilteringMode.KEEP_DOLBY_VISION
+        HdrFormatPreference.DOLBY_VISION_MEL -> FfmpegFilteringMode.KEEP_DOLBY_VISION_MEL
         else -> FfmpegFilteringMode.AUTO
     }
     return OffsetRenderersFactory(
@@ -1697,7 +1829,7 @@ private class OffsetRenderersFactory(
         enableAudioTrackPlaybackParams: Boolean
     ): AudioSink? {
         val audioCapabilities = if (enableAudioPassthrough) {
-            AudioCapabilities.getCapabilities(context)
+            AudioCapabilities.getCapabilities(context, AudioAttributes.DEFAULT, null)
         } else {
             AudioCapabilities.DEFAULT_AUDIO_CAPABILITIES
         }

@@ -51,6 +51,8 @@ object PreferenceConstants {
 
     const val KEY_RECENT_SEARCHES = "recent_searches"
     const val KEY_SEARCH_HISTORY_ENABLED = "search_history_enabled"
+    const val KEY_TMDB_ENABLED = "tmdb_enabled"
+    const val KEY_TMDB_API_KEY = "tmdb_api_key"
 
     const val KEY_PLAYBACK_SPEED = "playback_speed"
     const val KEY_SUBTITLE_ENABLED = "subtitle_enabled"
@@ -74,6 +76,7 @@ object PreferenceConstants {
     const val KEY_DIRECT_PLAY_ENABLED = "direct_play_enabled"
     const val KEY_PREFER_HDR_OVER_DV = "prefer_hdr_over_dolby_vision"
     const val KEY_HDR_FORMAT_PREFERENCE = "hdr_format_preference"
+    const val KEY_FRAME_RATE_SWITCH_ENABLED = "frame_rate_switch_enabled"
 
     const val KEY_LIBRARY_VIEW_TYPE = "library_view_type"
     const val KEY_LIBRARY_SORT_ORDER = "library_sort_order"
@@ -128,6 +131,8 @@ object PreferenceConstants {
     const val DEFAULT_NAVIGATE_EPISODES_TO_SEASON = true
     const val DEFAULT_FONT_SCALE = 1.0f
     const val DEFAULT_PREFERRED_LANGUAGE = "en"
+    const val DEFAULT_TMDB_ENABLED = true
+    const val DEFAULT_TMDB_API_KEY = "a08a490a3c5a3b030db03a180b6c5d4b"
     const val DEFAULT_GESTURE_CONTROLS = true
     const val DEFAULT_HIGH_CONTRAST = false
     const val DEFAULT_MTLS_ENABLED = false
@@ -140,10 +145,11 @@ object PreferenceConstants {
     const val DEFAULT_PREFERRED_VIDEO_CODEC = "h264"
     const val DEFAULT_PREFERRED_AUDIO_CODEC = "aac"
     const val DEFAULT_EXTERNAL_PLAYER_ENABLED = false
-    const val DEFAULT_AUDIO_PASSTHROUGH_ENABLED = false
+    const val DEFAULT_AUDIO_PASSTHROUGH_ENABLED = true
     const val DEFAULT_DIRECT_PLAY_ENABLED = false
     const val DEFAULT_PREFER_HDR_OVER_DV = false
     const val DEFAULT_HDR_FORMAT_PREFERENCE = "auto"
+    const val DEFAULT_FRAME_RATE_SWITCH_ENABLED = false
     const val DEFAULT_SERVER_LEGACY_PLAYBACK = false
     const val DEFAULT_REMEMBER_ACCOUNT = true
 

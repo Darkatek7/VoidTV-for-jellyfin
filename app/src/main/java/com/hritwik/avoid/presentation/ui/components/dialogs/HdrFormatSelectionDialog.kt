@@ -33,6 +33,7 @@ fun HdrFormatSelectionDialog(
                     HdrFormatPreference.AUTO -> "Let the device decide"
                     HdrFormatPreference.HDR10_PLUS -> "Strip Dolby Vision metadata"
                     HdrFormatPreference.DOLBY_VISION -> "Strip HDR10+ metadata"
+                    HdrFormatPreference.DOLBY_VISION_MEL -> "Keep Dolby Vision, drop FEL"
                 }
 
                 SelectionItem(

@@ -14,6 +14,7 @@ import com.hritwik.avoid.domain.model.media.MediaStream
 import com.hritwik.avoid.domain.model.media.PlaybackOptions
 import com.hritwik.avoid.domain.model.media.VideoQuality
 import com.hritwik.avoid.domain.model.playback.HdrFormatPreference
+import com.hritwik.avoid.domain.model.playback.Segment
 import com.hritwik.avoid.domain.model.playback.PlaybackStreamInfo
 import com.hritwik.avoid.domain.model.playback.PlaybackTranscodeOption
 import com.hritwik.avoid.domain.repository.LibraryRepository
@@ -1352,6 +1353,13 @@ class VideoPlaybackViewModel @Inject constructor(
         if (newSegment?.id != _state.value.activeSegment?.id) {
             _state.value = _state.value.copy(activeSegment = newSegment)
         }
+    }
+
+    fun applyChapterSegments(chapterSegments: List<Segment>) {
+        if (chapterSegments.isEmpty() || _state.value.segments.isNotEmpty()) {
+            return
+        }
+        _state.value = _state.value.copy(segments = chapterSegments)
     }
 
     fun skipSegment() {

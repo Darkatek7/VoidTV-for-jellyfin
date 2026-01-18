@@ -16,6 +16,7 @@ import com.hritwik.avoid.data.local.database.entities.MediaItemEntity
 import com.hritwik.avoid.data.local.database.entities.PendingActionEntity
 import com.hritwik.avoid.data.network.PriorityDispatcher
 import com.hritwik.avoid.data.remote.JellyfinApiService
+import com.hritwik.avoid.data.remote.TmdbApiService
 import com.hritwik.avoid.data.remote.dto.library.BaseItemDto
 import com.hritwik.avoid.data.remote.dto.library.StudioDto
 import com.hritwik.avoid.data.remote.dto.library.UserDataDto
@@ -48,6 +49,7 @@ import com.hritwik.avoid.domain.model.playback.TranscodeRequestParameters
 import com.hritwik.avoid.domain.repository.LibraryRepository
 import com.hritwik.avoid.domain.repository.RelatedResources
 import com.hritwik.avoid.utils.constants.ApiConstants
+import com.hritwik.avoid.utils.constants.PreferenceConstants
 import com.hritwik.avoid.utils.extensions.extractTvdbId
 import com.hritwik.avoid.utils.helpers.CodecDetector
 import android.util.Log
@@ -56,12 +58,14 @@ import com.hritwik.avoid.utils.helpers.normalizeUuid
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
+import java.text.Normalizer
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -110,6 +114,18 @@ class LibraryRepositoryImpl @Inject constructor(
             .baseUrl(baseUrl)
             .build()
             .create(JellyfinApiService::class.java)
+    }
+
+    private var tmdbApiService: TmdbApiService? = null
+
+    private fun getTmdbApiService(): TmdbApiService {
+        if (tmdbApiService == null) {
+            tmdbApiService = retrofitBuilder
+                .baseUrl("https://api.themoviedb.org/3/")
+                .build()
+                .create(TmdbApiService::class.java)
+        }
+        return tmdbApiService!!
     }
 
     override suspend fun getUserLibraries(
@@ -1092,23 +1108,96 @@ class LibraryRepositoryImpl @Inject constructor(
         startIndex: Int,
         limit: Int
     ): NetworkResult<List<MediaItem>> {
+        val normalizedQuery = searchTerm.trim()
         val serverUrl = getServerUrl()
         return safeApiCall(serverUrl) {
             val apiService = createApiService(serverUrl)
 
-            val authHeader = JellyfinApiService.createAuthHeader(deviceId, token = accessToken)
-            val response = apiService.searchItems(
-                userId = userId.id,
-                searchTerm = searchTerm,
-                includeItemTypes = includeItemTypes,
-                recursive = true,
-                startIndex = startIndex,
-                limit = limit,
-                authorization = authHeader
-            )
+            coroutineScope {
+                val authHeader = JellyfinApiService.createAuthHeader(deviceId, token = accessToken)
+                val baseSearch = async {
+                    val response = apiService.searchItems(
+                        userId = userId.id,
+                        searchTerm = normalizedQuery,
+                        includeItemTypes = includeItemTypes,
+                        recursive = true,
+                        startIndex = startIndex,
+                        limit = limit,
+                        authorization = authHeader
+                    )
 
-            response.items.map { dto ->
-                mapToMediaItem(dto)
+                    response.items.map { dto ->
+                        mapToMediaItem(dto)
+                    }
+                }
+
+                val tmdbEnabled = preferencesManager.getTmdbEnabled().first()
+                val tmdbApiKeyPref = preferencesManager.getTmdbApiKey().first()
+                val tmdbApiKey = if (tmdbApiKeyPref.isBlank()) {
+                    PreferenceConstants.DEFAULT_TMDB_API_KEY
+                } else {
+                    tmdbApiKeyPref
+                }
+                val shouldUseTmdb = tmdbEnabled &&
+                    tmdbApiKey.isNotBlank() &&
+                    normalizedQuery.length >= 3 &&
+                    startIndex == 0 &&
+                    networkMonitor.isConnected.value
+                val tmdbSearch: kotlinx.coroutines.Deferred<List<String>>? = if (shouldUseTmdb) {
+                    async {
+                        delay(500)
+                        val preferredLanguage = preferencesManager.getPreferredLanguage().first()
+                        val tmdbLanguage = toTmdbLanguage(preferredLanguage)
+                        runCatching {
+                            fetchTmdbSearchTerms(
+                                query = normalizedQuery,
+                                language = tmdbLanguage,
+                                maxResults = 5,
+                                apiKey = tmdbApiKey
+                            )
+                        }.onFailure { error ->
+                            Log.w(TAG, "TMDB search failed: ${error.message}")
+                        }.getOrDefault(emptyList())
+                    }
+                } else {
+                    null
+                }
+
+                val baseResults = baseSearch.await()
+                if (baseResults.size >= 6 || tmdbSearch == null) {
+                    return@coroutineScope baseResults
+                }
+
+                val tmdbTerms = tmdbSearch.await()
+                    .filterNot { it.equals(normalizedQuery, ignoreCase = true) }
+                if (tmdbTerms.isEmpty()) {
+                    return@coroutineScope baseResults
+                }
+
+                val mergedResults = LinkedHashMap<String, MediaItem>()
+                baseResults.forEach { item ->
+                    mergedResults.putIfAbsent(item.id, item)
+                }
+
+                for (term in tmdbTerms) {
+                    val response = apiService.searchItems(
+                        userId = userId.id,
+                        searchTerm = term,
+                        includeItemTypes = includeItemTypes,
+                        recursive = true,
+                        startIndex = startIndex,
+                        limit = limit,
+                        authorization = authHeader
+                    )
+
+                    response.items.map { dto ->
+                        mapToMediaItem(dto)
+                    }.forEach { item ->
+                        mergedResults.putIfAbsent(item.id, item)
+                    }
+                }
+
+                mergedResults.values.toList()
             }
         }
     }
@@ -1304,6 +1393,174 @@ class LibraryRepositoryImpl @Inject constructor(
     private suspend fun getServerUrl(): String {
         val stored = preferencesManager.getServerUrl().first() ?: "http://localhost:8096"
         return serverConnectionManager.normalizeUrl(stored)
+    }
+
+    private suspend fun fetchTmdbSearchTerms(
+        query: String,
+        language: String,
+        maxResults: Int,
+        apiKey: String
+    ): List<String> {
+        val normalizedQuery = normalizeSearchText(query)
+        val primaryCandidates = fetchTmdbCandidates(
+            query = query,
+            language = language,
+            apiKey = apiKey
+        )
+        val relaxedCandidates = if (primaryCandidates.isEmpty()) {
+            var fallbackCandidates: List<String> = emptyList()
+            for (relaxedQuery in buildRelaxedQueries(normalizedQuery)) {
+                if (relaxedQuery.isEmpty() ||
+                    relaxedQuery.equals(normalizedQuery, ignoreCase = true)
+                ) {
+                    continue
+                }
+                fallbackCandidates = fetchTmdbCandidates(
+                    query = relaxedQuery,
+                    language = language,
+                    apiKey = apiKey
+                )
+                if (fallbackCandidates.isNotEmpty()) {
+                    break
+                }
+            }
+            fallbackCandidates
+        } else {
+            emptyList()
+        }
+        val candidates = (primaryCandidates + relaxedCandidates).distinct()
+
+        return candidates.mapNotNull { title ->
+            val normalizedTitle = normalizeSearchText(title)
+            if (normalizedTitle.isEmpty()) {
+                null
+            } else {
+                title.trim() to similarityScore(normalizedQuery, normalizedTitle)
+            }
+        }
+            .sortedByDescending { it.second }
+            .map { it.first }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .take(maxResults)
+    }
+
+    private suspend fun fetchTmdbCandidates(
+        query: String,
+        language: String,
+        apiKey: String
+    ): List<String> {
+        val response = getTmdbApiService().searchMulti(
+            apiKey = apiKey.trim(),
+            query = query,
+            language = language
+        )
+        val multiResults = response.results
+            .filter { it.mediaType == null || it.mediaType == "movie" || it.mediaType == "tv" }
+            .mapNotNull { result ->
+                result.title
+                    ?: result.name
+                    ?: result.originalTitle
+                    ?: result.originalName
+            }
+
+        val tvResults = getTmdbApiService().searchTv(
+            apiKey = apiKey.trim(),
+            query = query,
+            language = language
+        ).results.mapNotNull { result ->
+            result.name
+                ?: result.title
+                ?: result.originalName
+                ?: result.originalTitle
+        }
+
+        val movieResults = getTmdbApiService().searchMovie(
+            apiKey = apiKey.trim(),
+            query = query,
+            language = language
+        ).results.mapNotNull { result ->
+            result.title
+                ?: result.name
+                ?: result.originalTitle
+                ?: result.originalName
+        }
+
+        return (multiResults + tvResults + movieResults)
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+    }
+
+    private fun buildRelaxedQueries(normalizedQuery: String): List<String> {
+        if (normalizedQuery.isBlank()) {
+            return emptyList()
+        }
+        val stopWords = setOf("the", "a", "an", "and", "of", "to", "in", "on", "at", "for", "with")
+        val tokens = normalizedQuery.split(Regex("\\s+")).filter { it.isNotBlank() }
+        val filtered = tokens.filter { token ->
+            token.length >= 4 && token !in stopWords
+        }
+        val queries = mutableListOf<String>()
+        if (filtered.isNotEmpty()) {
+            queries.add(filtered.joinToString(" "))
+        }
+        val longest = tokens.maxByOrNull { it.length }.orEmpty()
+        if (longest.length >= 4) {
+            queries.add(longest)
+        }
+        return queries.distinct()
+    }
+
+    private fun toTmdbLanguage(preferredLanguage: String): String {
+        val trimmed = preferredLanguage.trim()
+        if (trimmed.contains("-")) {
+            return trimmed
+        }
+        if (trimmed.length == 2) {
+            return "${trimmed}-US"
+        }
+        return "en-US"
+    }
+
+    private fun normalizeSearchText(text: String): String {
+        val normalized = Normalizer.normalize(text.lowercase(Locale.US), Normalizer.Form.NFD)
+        val stripped = normalized.replace(Regex("\\p{Mn}+"), "")
+        return stripped.replace(Regex("[^a-z0-9]+"), " ").trim()
+    }
+
+    private fun similarityScore(a: String, b: String): Double {
+        val maxLen = maxOf(a.length, b.length)
+        if (maxLen == 0) return 1.0
+        val distance = levenshteinDistance(a, b)
+        return 1.0 - (distance.toDouble() / maxLen.toDouble())
+    }
+
+    private fun levenshteinDistance(a: String, b: String): Int {
+        if (a == b) return 0
+        if (a.isEmpty()) return b.length
+        if (b.isEmpty()) return a.length
+
+        val prev = IntArray(b.length + 1) { it }
+        val curr = IntArray(b.length + 1)
+
+        for (i in a.indices) {
+            curr[0] = i + 1
+            val aChar = a[i]
+            for (j in b.indices) {
+                val cost = if (aChar == b[j]) 0 else 1
+                curr[j + 1] = minOf(
+                    curr[j] + 1,
+                    prev[j + 1] + 1,
+                    prev[j] + cost
+                )
+            }
+            for (j in 0..b.length) {
+                prev[j] = curr[j]
+            }
+        }
+
+        return prev[b.length]
     }
 
     private suspend fun shouldUseLegacyPlaybackApi(): Boolean {

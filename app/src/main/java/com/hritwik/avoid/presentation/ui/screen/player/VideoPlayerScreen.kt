@@ -53,6 +53,7 @@ fun VideoPlayerScreen(
     val decoderMode = playbackSettings.decoderMode
     val displayMode = playbackSettings.displayMode
     val audioPassthroughEnabled = playbackSettings.audioPassthroughEnabled
+    val frameRateSwitchEnabled = playbackSettings.frameRateSwitchEnabled
     val hdrFormatPreference = playbackSettings.hdrFormatPreference
     val autoSkipSegments = playbackSettings.autoSkipSegments
     val personalization by userDataViewModel.personalizationSettings.collectAsStateWithLifecycle()
@@ -117,6 +118,7 @@ fun VideoPlayerScreen(
                 playerState = playerState,
                 decoderMode = decoderMode,
                 displayMode = displayMode,
+                frameRateSwitchEnabled = frameRateSwitchEnabled,
                 userId = userId,
                 accessToken = accessToken,
                 serverUrl = serverUrl,
@@ -138,6 +140,7 @@ fun VideoPlayerScreen(
                 serverUrl = serverUrl,
                 autoSkipSegments = autoSkipSegments,
                 audioPassthroughEnabled = audioPassthroughEnabled,
+                frameRateSwitchEnabled = frameRateSwitchEnabled,
                 hdrFormatPreference = hdrFormatPreference,
                 gesturesEnabled = gesturesEnabled,
                 onBackClick = onBackClick,

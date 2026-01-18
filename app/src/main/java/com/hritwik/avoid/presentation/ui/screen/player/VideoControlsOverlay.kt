@@ -558,6 +558,10 @@ fun VideoControlsOverlay(
                         onCancelAutoSkip?.invoke()
                     }
                     when (event.key) {
+                        Key.Back, Key.Escape -> {
+                            onBackClick()
+                            true
+                        }
                         Key.DirectionLeft -> {
                             if (!isSeeking) {
                                 seekTargetPosition = currentPosition

@@ -65,6 +65,7 @@ class UserDataViewModel @Inject constructor(
         val displayMode: DisplayMode,
         val decoderMode: DecoderMode,
         val audioPassthroughEnabled: Boolean,
+        val frameRateSwitchEnabled: Boolean,
         val autoSkipSegments: Boolean,
         val externalPlayerEnabled: Boolean,
         val playerType: PlayerType,
@@ -79,6 +80,7 @@ class UserDataViewModel @Inject constructor(
         val displayMode: DisplayMode,
         val decoderMode: DecoderMode,
         val audioPassthroughEnabled: Boolean,
+        val frameRateSwitchEnabled: Boolean,
         val autoSkipSegments: Boolean,
         val externalPlayerEnabled: Boolean = PreferenceConstants.DEFAULT_EXTERNAL_PLAYER_ENABLED,
         val directPlayEnabled: Boolean = PreferenceConstants.DEFAULT_DIRECT_PLAY_ENABLED,
@@ -106,6 +108,7 @@ class UserDataViewModel @Inject constructor(
                 displayMode = display,
                 decoderMode = decoder,
                 audioPassthroughEnabled = PreferenceConstants.DEFAULT_AUDIO_PASSTHROUGH_ENABLED,
+                frameRateSwitchEnabled = PreferenceConstants.DEFAULT_FRAME_RATE_SWITCH_ENABLED,
                 autoSkipSegments = PreferenceConstants.DEFAULT_AUTO_SKIP_SEGMENTS,
                 directPlayEnabled = PreferenceConstants.DEFAULT_DIRECT_PLAY_ENABLED,
                 hdrFormatPreference = HdrFormatPreference.fromValue(
@@ -115,6 +118,9 @@ class UserDataViewModel @Inject constructor(
         }
             .combine(preferencesManager.getAudioPassthroughEnabled()) { bundle, passthrough ->
                 bundle.copy(audioPassthroughEnabled = passthrough)
+            }
+            .combine(preferencesManager.getFrameRateSwitchEnabled()) { bundle, enabled ->
+                bundle.copy(frameRateSwitchEnabled = enabled)
             }
             .combine(preferencesManager.getAutoSkipSegments()) { bundle, autoSkip ->
                 bundle.copy(autoSkipSegments = autoSkip)
@@ -141,6 +147,7 @@ class UserDataViewModel @Inject constructor(
                     displayMode = bundle.displayMode,
                     decoderMode = bundle.decoderMode,
                     audioPassthroughEnabled = bundle.audioPassthroughEnabled,
+                    frameRateSwitchEnabled = bundle.frameRateSwitchEnabled,
                     autoSkipSegments = bundle.autoSkipSegments,
                     externalPlayerEnabled = bundle.externalPlayerEnabled,
                     playerType = player,
@@ -161,7 +168,8 @@ class UserDataViewModel @Inject constructor(
                         DisplayMode.FIT_SCREEN,
                         DecoderMode.fromValue(PreferenceConstants.DEFAULT_DECODER_MODE),
                         PreferenceConstants.DEFAULT_AUDIO_PASSTHROUGH_ENABLED,
-                    false,
+                        PreferenceConstants.DEFAULT_FRAME_RATE_SWITCH_ENABLED,
+                        false,
                     PreferenceConstants.DEFAULT_EXTERNAL_PLAYER_ENABLED,
                     PlayerType.fromValue(PreferenceConstants.DEFAULT_PLAYER_TYPE),
                     PreferenceConstants.DEFAULT_DIRECT_PLAY_ENABLED,
@@ -196,6 +204,20 @@ class UserDataViewModel @Inject constructor(
                 false,
                 highContrast = false,
             )
+        )
+
+    val tmdbEnabled: StateFlow<Boolean> = preferencesManager.getTmdbEnabled()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            PreferenceConstants.DEFAULT_TMDB_ENABLED
+        )
+
+    val tmdbApiKey: StateFlow<String> = preferencesManager.getTmdbApiKey()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            PreferenceConstants.DEFAULT_TMDB_API_KEY
         )
 
     val subtitleSize: StateFlow<String> = preferencesManager.getSubtitleSize()
@@ -248,6 +270,10 @@ class UserDataViewModel @Inject constructor(
         viewModelScope.launch { preferencesManager.saveAudioPassthroughEnabled(enabled) }
     }
 
+    fun setFrameRateSwitchEnabled(enabled: Boolean) {
+        viewModelScope.launch { preferencesManager.saveFrameRateSwitchEnabled(enabled) }
+    }
+
     fun setAutoSkipSegments(enabled: Boolean) {
         viewModelScope.launch { preferencesManager.saveAutoSkipSegments(enabled) }
     }
@@ -262,6 +288,14 @@ class UserDataViewModel @Inject constructor(
 
     fun setPreferHdrOverDolbyVision(enabled: Boolean) {
         viewModelScope.launch { preferencesManager.savePreferHdrOverDolbyVision(enabled) }
+    }
+
+    fun setTmdbEnabled(enabled: Boolean) {
+        viewModelScope.launch { preferencesManager.saveTmdbEnabled(enabled) }
+    }
+
+    fun setTmdbApiKey(apiKey: String) {
+        viewModelScope.launch { preferencesManager.saveTmdbApiKey(apiKey) }
     }
 
     fun setHdrFormatPreference(preference: HdrFormatPreference) {

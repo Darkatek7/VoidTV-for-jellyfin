@@ -50,6 +50,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.util.UnstableApi
+import com.hritwik.avoid.domain.model.playback.Segment
 import com.hritwik.avoid.domain.model.library.MediaItem
 import com.hritwik.avoid.domain.model.playback.DecoderMode
 import com.hritwik.avoid.domain.model.playback.DisplayMode
@@ -87,6 +88,7 @@ import dev.marcelsoftware.mpvcompose.MPVPlayer
 import ir.kaaveh.sdpcompose.sdp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import java.io.File
 import kotlin.math.max
 import kotlin.math.min
@@ -101,6 +103,7 @@ fun MpvPlayerView(
     playerState: VideoPlaybackState,
     decoderMode: DecoderMode,
     displayMode: DisplayMode,
+    frameRateSwitchEnabled: Boolean,
     userId: String,
     accessToken: String,
     serverUrl: String,
@@ -115,7 +118,8 @@ fun MpvPlayerView(
     val mpvConfigOptions = remember(context) { MpvConfig.readOptions(context) }
     val mpvConfigKeys = remember(mpvConfigOptions) { mpvConfigOptions.keys.map { it.lowercase() }.toSet() }
     val currentMediaItem = playerState.mediaItem ?: mediaItem
-    val contentFrameRate = playerState.playbackOptions.selectedVideoStream?.frameRate
+    val selectedVideoStream = playerState.playbackOptions.selectedVideoStream
+    val contentFrameRate = selectedVideoStream?.frameRate
     val mpvRootView = LocalView.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -134,7 +138,8 @@ fun MpvPlayerView(
     var isBuffering by remember { mutableStateOf(false) }
     var isSeeking by remember { mutableStateOf(false) }
     var isMpvInitialized by remember { mutableStateOf(false) }
-    var lastAppliedFrameRate by remember { mutableStateOf<Float?>(null) }
+    var lastAppliedSwitchKey by remember { mutableStateOf<FrameRateHelper.DisplaySwitchKey?>(null) }
+    var originalDisplayModeId by remember { mutableStateOf<Int?>(null) }
     val window = activity?.window
     var brightness by remember {
         mutableFloatStateOf(window?.attributes?.screenBrightness?.takeIf { it >= 0 } ?: 0.5f)
@@ -181,6 +186,7 @@ fun MpvPlayerView(
     var autoSkipProgress by remember { mutableFloatStateOf(0f) }
     var isAutoSkipActive by remember { mutableStateOf(false) }
     var autoSkipCancelled by remember { mutableStateOf(false) }
+    var mpvChapterSegmentsLoaded by remember { mutableStateOf(false) }
     val initialSubtitleLanguage = subtitleStreams.firstOrNull { it.index == currentSubtitleTrack }?.language
         ?: playerState.preferredSubtitleLanguage
 
@@ -219,6 +225,65 @@ fun MpvPlayerView(
             autoSkipProgress = 0f
             autoSkipCancelled = true
         }
+    }
+
+    val introChapterRegex = remember {
+        Regex("(?i)(Opening Credits|intro|opening|^OP$)")
+    }
+    val outroChapterRegex = remember {
+        Regex("(?i)(outro|closing|ending|^ED$)")
+    }
+    val creditsChapterRegex = remember {
+        Regex("(?i)(End Credits)")
+    }
+
+    fun chapterTitleToSegmentType(title: String?): String? {
+        val normalized = title?.trim().orEmpty()
+        if (normalized.isEmpty()) return null
+        return when {
+            creditsChapterRegex.containsMatchIn(normalized) -> "Credits"
+            outroChapterRegex.containsMatchIn(normalized) -> "Outro"
+            introChapterRegex.containsMatchIn(normalized) -> "Intro"
+            else -> null
+        }
+    }
+
+    fun loadMpvChapterSegments(): List<Segment> {
+        val raw = MPVLib.getPropertyString("chapter-list") ?: return emptyList()
+        if (!raw.trimStart().startsWith("[")) return emptyList()
+        return runCatching {
+            val chaptersJson = JSONArray(raw)
+            val chapters = mutableListOf<Pair<Long, String?>>()
+            for (i in 0 until chaptersJson.length()) {
+                val chapter = chaptersJson.optJSONObject(i) ?: continue
+                val timeSeconds = chapter.optDouble("time", Double.NaN)
+                if (!timeSeconds.isFinite() || timeSeconds < 0.0) continue
+                val title = chapter.optString("title", "")
+                chapters.add((timeSeconds * 1000.0).roundToLong() to title)
+            }
+            if (chapters.isEmpty()) return emptyList()
+            val sorted = chapters.sortedBy { it.first }
+            val durationMs = max(
+                playbackDuration * 1000,
+                sorted.last().first + 1000
+            )
+            val segments = mutableListOf<Segment>()
+            for (index in sorted.indices) {
+                val startMs = sorted[index].first
+                val endMs = if (index + 1 < sorted.size) sorted[index + 1].first else durationMs
+                if (endMs <= startMs) continue
+                val type = chapterTitleToSegmentType(sorted[index].second) ?: continue
+                segments.add(
+                    Segment(
+                        id = "chapter-$index-$startMs",
+                        startPositionTicks = startMs * 10_000,
+                        endPositionTicks = endMs * 10_000,
+                        type = type
+                    )
+                )
+            }
+            segments
+        }.getOrDefault(emptyList())
     }
 
     LaunchedEffect(playerState.activeSegment, autoSkipSegments, autoSkipCancelled) {
@@ -351,6 +416,10 @@ fun MpvPlayerView(
     }
 
     val isRemoteSource = playerState.videoUrl?.let { it.toUri().scheme != "file" } ?: false
+
+    LaunchedEffect(currentMediaItem.id, playerState.videoUrl) {
+        mpvChapterSegmentsLoaded = false
+    }
 
     var pendingTrackChangeEvent by remember { mutableStateOf<TrackChangeEvent?>(null) }
 
@@ -605,23 +674,74 @@ fun MpvPlayerView(
     }
 
     LaunchedEffect(displayMode, isMpvInitialized) {
-        if (isMpvInitialized) {
-            handleDisplayModeChange(displayMode)
-        }
+        if (!isMpvInitialized) return@LaunchedEffect
+        handleDisplayModeChange(displayMode)
     }
 
     LaunchedEffect(contentFrameRate, isMpvInitialized) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return@LaunchedEffect
         if (!isMpvInitialized) return@LaunchedEffect
-        val rate = contentFrameRate?.takeIf { it > 0f } ?: return@LaunchedEffect
-        if (lastAppliedFrameRate == rate) return@LaunchedEffect
-        val applied = FrameRateHelper.requestFrameRate(
+        if (!frameRateSwitchEnabled) return@LaunchedEffect
+        val rate = contentFrameRate?.takeIf { it.isFinite() && it > 0f } ?: return@LaunchedEffect
+        val switchKey = FrameRateHelper.DisplaySwitchKey(
+            rate = rate,
+            width = selectedVideoStream?.width,
+            height = selectedVideoStream?.height
+        )
+        if (lastAppliedSwitchKey == switchKey) return@LaunchedEffect
+        val display = mpvRootView.display
+        if (originalDisplayModeId == null) {
+            originalDisplayModeId = display?.mode?.modeId
+        }
+        val displayMode = display?.let {
+            FrameRateHelper.selectBestDisplayMode(
+                display = it,
+                streamWidth = selectedVideoStream?.width,
+                streamHeight = selectedVideoStream?.height,
+                targetRate = rate,
+                preferExactResolution = true
+            )
+        }
+        val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as? android.hardware.display.DisplayManager
+        val preferredApplied = if (displayMode != null && display != null && window != null && displayManager != null) {
+            FrameRateHelper.requestPreferredDisplayMode(
+                window = window,
+                displayManager = displayManager,
+                displayId = display.displayId,
+                modeId = displayMode.modeId
+            )
+        } else {
+            false
+        }
+        val applied = preferredApplied || FrameRateHelper.requestFrameRate(
             surfaceProvider = { FrameRateHelper.findSurfaceView(mpvRootView) },
             frameRate = rate
         )
         if (applied) {
-            lastAppliedFrameRate = rate
-            FrameRateHelper.showFrameRateToast(context, rate)
+            lastAppliedSwitchKey = switchKey
+            val verification = FrameRateHelper.verifyFrameRate(
+                viewProvider = { mpvRootView },
+                targetRate = rate
+            )
+            val modeMatched = display?.mode?.modeId == displayMode?.modeId
+            val resolutionLabel = displayMode?.let { "${it.physicalWidth}x${it.physicalHeight}" }
+            FrameRateHelper.showFrameRateToast(
+                context = context,
+                currentRate = verification.currentRate ?: rate,
+                requestedRate = rate,
+                verified = verification.matched,
+                modeMatched = modeMatched && !verification.matched,
+                resolutionLabel = resolutionLabel
+            )
+        }
+    }
+
+    DisposableEffect(window) {
+        onDispose {
+            val modeId = originalDisplayModeId
+            if (window != null && modeId != null) {
+                FrameRateHelper.setPreferredDisplayMode(window, modeId)
+            }
         }
     }
 
@@ -748,6 +868,17 @@ fun MpvPlayerView(
                     if (!isSeeking) {
                         playbackProgress = timePos
                         videoPlaybackViewModel.updatePlaybackPosition(timePos * 1000)
+                    }
+                    if (
+                        timePos > 0 &&
+                        !mpvChapterSegmentsLoaded &&
+                        playerState.segments.isEmpty()
+                    ) {
+                        val chapterSegments = loadMpvChapterSegments()
+                        if (chapterSegments.isNotEmpty()) {
+                            videoPlaybackViewModel.applyChapterSegments(chapterSegments)
+                        }
+                        mpvChapterSegmentsLoaded = true
                     }
                 }
                 boolean("eof-reached") { eofReached ->

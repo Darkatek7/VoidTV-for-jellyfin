@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalComposeUiApi::class, UnstableApi::class)
+
 package com.hritwik.avoid
 
 import android.app.Application
@@ -7,8 +9,9 @@ import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
 import android.util.Log
-import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.ui.ComposeUiFlags
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.core.net.toUri
 import androidx.media3.common.util.UnstableApi
 import coil.Coil
@@ -63,9 +66,9 @@ class VoidApplication : Application() {
         CrashReporter.report(throwable)
     }
 
-    @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
+        ComposeUiFlags.isAdaptiveRefreshRateEnabled = false
         installBouncyCastleProvider()
         installConscryptProvider()
         applicationScope.launch(crashHandler) { copyBundledFonts() }

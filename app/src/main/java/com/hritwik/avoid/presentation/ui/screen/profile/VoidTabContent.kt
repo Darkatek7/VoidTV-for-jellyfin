@@ -19,8 +19,10 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SurroundSound
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.MaterialTheme
@@ -66,6 +68,7 @@ fun VoidTabContent(
     val displayMode = playbackSettings.displayMode
     val playerType = playbackSettings.playerType
     val audioPassthroughEnabled = playbackSettings.audioPassthroughEnabled
+    val frameRateSwitchEnabled = playbackSettings.frameRateSwitchEnabled
     val autoSkip = playbackSettings.autoSkipSegments
     val externalPlayerEnabled = playbackSettings.externalPlayerEnabled
     val directPlayEnabled = playbackSettings.directPlayEnabled
@@ -74,6 +77,7 @@ fun VoidTabContent(
     val subtitleSize by userDataViewModel.subtitleSize.collectAsStateWithLifecycle()
     val progressBarColorKey by userDataViewModel.playerProgressColor.collectAsStateWithLifecycle()
     val seekProgressBarColorKey by userDataViewModel.playerProgressSeekColor.collectAsStateWithLifecycle()
+    val tmdbEnabled by userDataViewModel.tmdbEnabled.collectAsStateWithLifecycle()
 
     val playThemeFocusRequester = remember { FocusRequester() }
 
@@ -103,6 +107,16 @@ fun VoidTabContent(
                 checked = themeSongsEnabled,
                 onCheckedChange = { userDataViewModel.setPlayThemeSongs(it) },
                 focusRequester = playThemeFocusRequester
+            )
+        }
+
+        item {
+            SettingItemWithSwitch(
+                icon = Icons.Default.Search,
+                title = "TMDB Search Assist",
+                subtitle = "Improve search results for special character titles",
+                checked = tmdbEnabled,
+                onCheckedChange = { userDataViewModel.setTmdbEnabled(it) }
             )
         }
 
@@ -262,6 +276,16 @@ fun VoidTabContent(
                     onDismiss = { showDisplayModeDialog = false }
                 )
             }
+        }
+
+        item {
+            SettingItemWithSwitch(
+                icon = Icons.Default.Sync,
+                title = "Match Refresh Rate",
+                subtitle = "Switch display mode and refresh rate to match content",
+                checked = frameRateSwitchEnabled,
+                onCheckedChange = { userDataViewModel.setFrameRateSwitchEnabled(it) }
+            )
         }
 
         item {
