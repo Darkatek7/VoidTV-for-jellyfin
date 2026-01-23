@@ -401,6 +401,7 @@ fun MediaActionButtons(
                         onClick = { videoPlaybackViewModel.showVersionDialog() },
                         interactionSource = versionInteractionSource,
                         accentColor = buttonColor,
+                        baseContainerAlpha = 0.18f,
                         onMoveFocus = { direction ->
                             when (direction) {
                                 FocusDirection.Left -> {
@@ -425,6 +426,7 @@ fun MediaActionButtons(
                         onClick = { videoPlaybackViewModel.showAudioDialog() },
                         interactionSource = audioInteractionSource,
                         accentColor = buttonColor,
+                        baseContainerAlpha = 0.18f,
                         onMoveFocus = { direction ->
                             when (direction) {
                                 FocusDirection.Left -> {
@@ -449,6 +451,7 @@ fun MediaActionButtons(
                         onClick = { videoPlaybackViewModel.showSubtitleDialog() },
                         interactionSource = subtitleInteractionSource,
                         accentColor = buttonColor,
+                        baseContainerAlpha = 0.18f,
                         onMoveFocus = { direction ->
                             when (direction) {
                                 FocusDirection.Left -> {
@@ -463,7 +466,8 @@ fun MediaActionButtons(
                     EpisodeInfoChip(
                         label = null,
                         value = videoCodecText,
-                        accentColor = buttonColor
+                        accentColor = buttonColor,
+                        baseContainerAlpha = 0.18f
                     )
                 }
             }

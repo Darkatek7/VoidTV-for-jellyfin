@@ -546,8 +546,10 @@ fun PlayerProgressColorDialog(
     val focusRequester = remember { FocusRequester() }
     val normalized = normalizeHexColor(input)
     val seekNormalized = normalizeHexColor(seekInput)
-    val isValid = input.trim().isEmpty() || normalized != null
-    val isSeekValid = seekInput.trim().isEmpty() || seekNormalized != null
+    val trimmedInput = input.trim()
+    val trimmedSeekInput = seekInput.trim()
+    val isValid = trimmedInput.isEmpty() || normalized != null
+    val isSeekValid = trimmedSeekInput.isEmpty() || seekNormalized != null
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -566,12 +568,12 @@ fun PlayerProgressColorDialog(
             Button(
                 enabled = isValid && isSeekValid,
                 onClick = {
-                    val value = if (input.trim().isEmpty()) {
+                    val value = if (trimmedInput.isEmpty()) {
                         PreferenceConstants.DEFAULT_PLAYER_PROGRESS_COLOR
                     } else {
                         normalized ?: currentColorKey
                     }
-                    val seekValue = if (seekInput.trim().isEmpty()) {
+                    val seekValue = if (trimmedSeekInput.isEmpty()) {
                         PreferenceConstants.DEFAULT_PLAYER_PROGRESS_SEEK_COLOR
                     } else {
                         seekNormalized ?: currentSeekColorKey

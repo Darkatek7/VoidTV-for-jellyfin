@@ -146,7 +146,11 @@ fun VoidTabContent(
 
             item {
                 var showFallbackDialog by remember { mutableStateOf(false) }
-                val fallbackDisplayText = themeSongFallbackUrl.ifBlank { "Not set" }
+                val fallbackDisplayText = if (themeSongFallbackUrl.isBlank()) {
+                    "Not set"
+                } else {
+                    "Custom"
+                }
 
                 SettingItem(
                     icon = Icons.Default.Link,

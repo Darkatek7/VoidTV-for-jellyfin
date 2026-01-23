@@ -1,7 +1,5 @@
 package com.hritwik.avoid.presentation.ui.screen.home
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import com.hritwik.avoid.domain.model.library.MediaItem
 import com.hritwik.avoid.domain.model.library.Library
-import com.hritwik.avoid.presentation.ui.screen.home.HomeMediaRowSection
 import com.hritwik.avoid.presentation.ui.state.AuthServerState
 import com.hritwik.avoid.presentation.ui.state.FeatureContentFocusTarget
 import com.hritwik.avoid.presentation.ui.state.LibraryState
@@ -22,7 +19,6 @@ import com.hritwik.avoid.utils.extensions.resetFeatureOnFocusExit
 import com.hritwik.avoid.utils.helpers.calculateRoundedValue
 import ir.kaaveh.sdpcompose.sdp
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ContentSection(
     modifier: Modifier,
@@ -54,14 +50,12 @@ fun ContentSection(
     val contentServerUrl = authState.authSession?.server?.url ?: serverUrl
 
     val lazyListState = rememberLazyListState()
-    val snapFlingBehavior = rememberSnapFlingBehavior(lazyListState = lazyListState)
 
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .resetFeatureOnFocusExit { onFocusedItemChange(null) },
         state = lazyListState,
-        flingBehavior = snapFlingBehavior,
         verticalArrangement = Arrangement.spacedBy(calculateRoundedValue(28).sdp),
         contentPadding = PaddingValues(bottom = calculateRoundedValue(40).sdp)
     ) {

@@ -25,6 +25,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +45,9 @@ import com.hritwik.avoid.utils.constants.ApiConstants
 import com.hritwik.avoid.utils.helpers.LocalImageHelper
 import com.hritwik.avoid.utils.helpers.calculateRoundedValue
 import ir.kaaveh.sdpcompose.sdp
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 
 
 private val FOCUS_BORDER_WIDTH = 2.dp
@@ -58,11 +62,14 @@ fun MediaItemCard(
     cardType: MediaCardType = MediaCardType.POSTER,
     showProgress: Boolean = true,
     showTitle: Boolean = true,
+    enableBringIntoView: Boolean = false,
     onClick: (MediaItem) -> Unit = {},
     onFocus: (MediaItem) -> Unit = {},
     focusRequester: FocusRequester? = null
 ) {
     val imageHelper = LocalImageHelper.current
+    val coroutineScope = rememberCoroutineScope()
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
 
     val aspectRatio = remember(cardType) {
         when (cardType) {
@@ -87,20 +94,35 @@ fun MediaItemCard(
     val scale by animateFloatAsState(
         targetValue = if (isFocused) 1.05f else 1f,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
+            dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessHigh
         ),
         label = "focus_scale"
     )
     val elevation by animateDpAsState(
         targetValue = if (isFocused) calculateRoundedValue(16).dp else calculateRoundedValue(4).dp,
-        animationSpec = spring(stiffness = Spring.StiffnessHigh),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessHigh
+        ),
         label = "focus_elevation"
+    )
+    val borderWidth by animateDpAsState(
+        targetValue = if (isFocused) {
+            calculateRoundedValue(FOCUS_BORDER_WIDTH.value.toInt()).dp
+        } else {
+            0.dp
+        },
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessHigh
+        ),
+        label = "focus_border_width"
     )
 
     
     val cardBorder = if (isFocused) {
-        BorderStroke(calculateRoundedValue(FOCUS_BORDER_WIDTH.value.toInt()).dp, FOCUS_BORDER_COLOR)
+        BorderStroke(borderWidth, FOCUS_BORDER_COLOR)
     } else {
         null
     }
@@ -115,6 +137,7 @@ fun MediaItemCard(
     Column(
         modifier = modifier
             .width(defaultWidth)
+            .then(if (enableBringIntoView) Modifier.bringIntoViewRequester(bringIntoViewRequester) else Modifier)
             .dpadNavigation(
                 shape = focusShape,
                 focusRequester = focusRequester,
@@ -122,7 +145,14 @@ fun MediaItemCard(
                 showFocusOutline = false,
                 onFocusChange = { focused ->
                     isFocused = focused
-                    if (focused) onFocus(mediaItem)
+                    if (focused) {
+                        onFocus(mediaItem)
+                        if (enableBringIntoView) {
+                            coroutineScope.launch {
+                                bringIntoViewRequester.bringIntoView()
+                            }
+                        }
+                    }
                 }
             )
     ) {

@@ -6,6 +6,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -20,6 +23,7 @@ import androidx.media3.common.MediaItem as ExoMediaItem
 @Composable
 fun ThemeSongPlayer(url: String?, volumeLevel: Int) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val cacheFactory = remember {
         EntryPointAccessors.fromApplication(
             context.applicationContext,
@@ -41,6 +45,29 @@ fun ThemeSongPlayer(url: String?, volumeLevel: Int) {
             player.playWhenReady = true
         } else {
             player.stop()
+        }
+    }
+
+    DisposableEffect(lifecycleOwner, url) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START,
+                Lifecycle.Event.ON_RESUME -> {
+                    if (url != null) {
+                        player.playWhenReady = true
+                    }
+                }
+                Lifecycle.Event.ON_PAUSE,
+                Lifecycle.Event.ON_STOP -> {
+                    player.playWhenReady = false
+                    player.pause()
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 

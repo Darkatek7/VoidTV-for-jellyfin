@@ -103,7 +103,3 @@ private fun extractDominantColorFromBitmap(bitmap: Bitmap): Color? {
 
 
 
-
-fun clearColorCache() {
-    colorCache.evictAll()
-}

@@ -61,8 +61,7 @@ fun FeatureHeader(
     var focusedItem by remember { mutableStateOf(selected) }
     var displayItemCache by remember { mutableStateOf<Pair<MediaItem?, MediaItem?>>(null to null) }
     var heroBackgroundItem by remember { mutableStateOf<MediaItem?>(null) }
-    
-    val seriesDetailsCache by remember { mutableStateOf(mutableMapOf<String, MediaItem>()) }
+    val seriesDetailsCache = remember { mutableMapOf<String, MediaItem>() }
     val watchNowFocusRequester = remember { FocusRequester() }
     val contentFocusRequester = remember { FocusRequester() }
     val context = LocalContext.current
@@ -108,6 +107,11 @@ fun FeatureHeader(
             resumeItems.isNotEmpty() -> FeatureContentFocusTarget.Resume
             else -> null
         }
+    }
+    val hasContentFocusTarget = contentFocusTarget != null
+
+    LaunchedEffect(selected) {
+        focusedItem = selected
     }
 
     
@@ -280,6 +284,7 @@ fun FeatureHeader(
                         serverUrl = serverUrl,
                         watchNowFocusRequester = watchNowFocusRequester,
                         contentFocusRequester = contentFocusRequester,
+                        hasContentFocusTarget = hasContentFocusTarget,
                         sideNavigationFocusRequester = sideNavigationFocusRequester,
                         onMediaItemClick = onMediaItemClick
                     )

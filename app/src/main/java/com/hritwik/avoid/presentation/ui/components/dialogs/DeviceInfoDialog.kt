@@ -201,6 +201,27 @@ fun DeviceInfoDialog(
                 }
 
                 item {
+                    InfoSection(title = "Audio Passthrough Codecs") {
+                        if (deviceInfo.audioPassthroughCodecs.isEmpty()) {
+                            Text(
+                                text = "No passthrough codecs reported",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        } else {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(calculateRoundedValue(8).sdp),
+                                verticalArrangement = Arrangement.spacedBy(calculateRoundedValue(8).sdp)
+                            ) {
+                                deviceInfo.audioPassthroughCodecs.forEach { codec ->
+                                    CodecChip(text = codec)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
                     Spacer(modifier = Modifier.height(calculateRoundedValue(8).sdp))
                 }
             }

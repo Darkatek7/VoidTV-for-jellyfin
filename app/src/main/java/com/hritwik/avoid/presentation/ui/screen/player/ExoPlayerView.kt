@@ -59,6 +59,7 @@ import androidx.media3.common.Metadata
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Log
@@ -72,6 +73,7 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecInfo
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.ffmpeg.FilteringExtractorsFactory
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.text.SubtitleDecoderFactory
 import androidx.media3.exoplayer.text.TextRenderer
 import androidx.media3.exoplayer.video.VideoRendererEventListener
@@ -547,9 +549,39 @@ fun ExoPlayerView(
                 context = context,
                 decoderMode = decoderMode,
                 enableAudioPassthrough = audioPassthroughEnabled,
-                hdrFormatPreference = effectiveHdrPreference
+                hdrFormatPreference = effectiveHdrPreference,
+                enableFfmpegAudio = !audioPassthroughEnabled
             ) { viewModel.state.value.subtitleOffsetMs }
+            val audioCapabilities = if (audioPassthroughEnabled) {
+                AudioCapabilities.getCapabilities(context, AudioAttributes.DEFAULT, null)
+            } else {
+                AudioCapabilities.DEFAULT_AUDIO_CAPABILITIES
+            }
+            val passthroughMimeTypes = if (audioPassthroughEnabled) {
+                resolvePassthroughMimeTypes(audioCapabilities)
+            } else {
+                emptyList()
+            }
+            val trackSelector = DefaultTrackSelector(context).apply {
+                val offloadMode = TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED
+                setParameters(
+                    buildUponParameters().apply {
+                        setAudioOffloadPreferences(
+                            TrackSelectionParameters.AudioOffloadPreferences.DEFAULT.buildUpon()
+                                .setAudioOffloadMode(offloadMode)
+                                .build()
+                        )
+                        if (passthroughMimeTypes.isNotEmpty()) {
+                            setPreferredAudioMimeTypes(*passthroughMimeTypes.toTypedArray())
+                        } else {
+                            setPreferredAudioMimeTypes()
+                        }
+                        setAllowInvalidateSelectionsOnRendererCapabilitiesChange(true)
+                    }
+                )
+            }
             val builder = ExoPlayer.Builder(context, renderersFactory)
+                .setTrackSelector(trackSelector)
             builder.setMediaSourceFactory(mediaSourceFactory)
             builder.build().apply {
                 playWhenReady = true
@@ -1483,6 +1515,32 @@ private fun createRenderersFactory(
     }
 }
 
+private fun resolvePassthroughMimeTypes(capabilities: AudioCapabilities): List<String> {
+    val mimeTypes = mutableListOf<String>()
+    if (capabilities.supportsEncoding(C.ENCODING_AC3)) {
+        mimeTypes += MimeTypes.AUDIO_AC3
+    }
+    if (capabilities.supportsEncoding(C.ENCODING_E_AC3)) {
+        mimeTypes += MimeTypes.AUDIO_E_AC3
+        mimeTypes += MimeTypes.AUDIO_E_AC3_JOC
+    }
+    if (capabilities.supportsEncoding(C.ENCODING_AC4)) {
+        mimeTypes += MimeTypes.AUDIO_AC4
+    }
+    if (capabilities.supportsEncoding(C.ENCODING_DTS)) {
+        mimeTypes += MimeTypes.AUDIO_DTS
+        mimeTypes += MimeTypes.AUDIO_DTS_EXPRESS
+    }
+    if (capabilities.supportsEncoding(C.ENCODING_DTS_HD)) {
+        mimeTypes += MimeTypes.AUDIO_DTS_HD
+        mimeTypes += MimeTypes.AUDIO_DTS_X
+    }
+    if (capabilities.supportsEncoding(C.ENCODING_DOLBY_TRUEHD)) {
+        mimeTypes += MimeTypes.AUDIO_TRUEHD
+    }
+    return mimeTypes.distinct()
+}
+
 private fun ExoPlayer.findTrackOverride(
     trackType: Int,
     stream: MediaStream,
@@ -1815,10 +1873,8 @@ private class OffsetRenderersFactory(
 
     init {
         val extensionMode = when {
-            
-            enableAudioPassthrough && !enableFfmpegAudio -> EXTENSION_RENDERER_MODE_OFF
-            enableAudioPassthrough -> EXTENSION_RENDERER_MODE_ON
-            enableFfmpegAudio -> EXTENSION_RENDERER_MODE_PREFER
+            enableAudioPassthrough -> EXTENSION_RENDERER_MODE_OFF
+            enableFfmpegAudio -> EXTENSION_RENDERER_MODE_ON
             else -> EXTENSION_RENDERER_MODE_OFF
         }
         setExtensionRendererMode(extensionMode)

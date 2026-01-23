@@ -1837,7 +1837,10 @@ class LibraryRepositoryImpl @Inject constructor(
                 networkResult
             }
 
-            is NetworkResult.Loading<*> -> TODO()
+            is NetworkResult.Loading<*> -> NetworkResult.Error(
+                AppError.Unknown("Favorite request still loading"),
+                null
+            )
         }
     }
 

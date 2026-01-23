@@ -10,15 +10,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import com.hritwik.avoid.domain.model.library.MediaItem
-import com.hritwik.avoid.presentation.ui.state.FeatureContentFocusTarget
 import com.hritwik.avoid.utils.helpers.calculateRoundedValue
 import ir.kaaveh.sdpcompose.sdp
 
@@ -28,11 +23,10 @@ fun HeroContent(
     serverUrl: String,
     watchNowFocusRequester: FocusRequester,
     contentFocusRequester: FocusRequester,
+    hasContentFocusTarget: Boolean,
     sideNavigationFocusRequester: FocusRequester?,
     onMediaItemClick: (MediaItem) -> Unit
 ) {
-    var hasContentFocusTarget by remember { mutableStateOf(false) }
-
     Column(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,

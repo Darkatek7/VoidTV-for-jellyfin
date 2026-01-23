@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
-import android.util.LruCache
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
@@ -16,8 +15,6 @@ import coil.size.Scale
 import com.hritwik.avoid.presentation.ui.components.visual.PaletteCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-private val colorPaletteCache = LruCache<String, List<Color>>(20)
 
 suspend fun extractColorsFromUrl(
     context: Context,

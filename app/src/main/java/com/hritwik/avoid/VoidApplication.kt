@@ -28,6 +28,7 @@ import com.hritwik.avoid.data.sync.UserDataSyncWorker
 import com.hritwik.avoid.di.ApplicationScope
 import com.hritwik.avoid.utils.CrashReporter
 import com.hritwik.avoid.utils.MpvConfig
+import com.hritwik.avoid.utils.constants.ApiConstants
 import com.hritwik.avoid.utils.helpers.NetworkMonitor
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -35,10 +36,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okhttp3.HttpUrl
 import org.conscrypt.Conscrypt
 import java.io.File
+import java.net.URI
 import java.security.Security
 import java.util.Locale
 import javax.inject.Inject
@@ -75,6 +79,23 @@ class VoidApplication : Application() {
         applyTheme()
         val coilOkHttpClient = okHttpClient.newBuilder()
             .apply { interceptors().removeAll { it is CdnInterceptor } }
+            .addInterceptor { chain ->
+                val request = chain.request()
+                val token = runBlocking(Dispatchers.IO) {
+                    preferencesManager.getAccessToken().first()
+                }
+                val serverUrl = runBlocking(Dispatchers.IO) {
+                    preferencesManager.getServerUrl().first()
+                }
+                if (!token.isNullOrBlank() && shouldAttachToken(request.url, serverUrl)) {
+                    val updated = request.newBuilder()
+                        .header(ApiConstants.HEADER_TOKEN, token)
+                        .build()
+                    chain.proceed(updated)
+                } else {
+                    chain.proceed(request)
+                }
+            }
             .build()
         imageLoader = ImageLoader.Builder(this)
             .okHttpClient(coilOkHttpClient)
@@ -125,6 +146,16 @@ class VoidApplication : Application() {
                 trimCallbacks.forEach { it.onLowMemory() }
             }
         })
+    }
+
+    private fun shouldAttachToken(url: HttpUrl, serverUrl: String?): Boolean {
+        if (url.scheme != "http" && url.scheme != "https") return false
+        if (serverUrl.isNullOrBlank()) return false
+        val serverHost = runCatching {
+            val normalized = if (serverUrl.contains("://")) serverUrl else "http://$serverUrl"
+            URI(normalized).host
+        }.getOrNull() ?: return false
+        return url.host.equals(serverHost, ignoreCase = true)
     }
 
     private fun isIgnoringBatteryOptimizations(): Boolean {

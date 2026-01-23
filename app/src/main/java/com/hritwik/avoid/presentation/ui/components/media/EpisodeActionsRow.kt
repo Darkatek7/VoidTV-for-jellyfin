@@ -450,6 +450,7 @@ fun EpisodeInfoChip(
     onMoveFocus: ((FocusDirection) -> Boolean)? = null,
     focusRequester: FocusRequester? = null,
     accentColor: Color? = null,
+    baseContainerAlpha: Float = 0.1f,
 ) {
     val shape = RoundedCornerShape(calculateRoundedValue(14).sdp)
     val resolvedInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
@@ -484,7 +485,7 @@ fun EpisodeInfoChip(
             Color.White.copy(alpha = 0.2f)
         }
     } else {
-        Color.White.copy(alpha = 0.1f)
+        Color.White.copy(alpha = baseContainerAlpha)
     }
     val containerColor by animateColorAsState(
         targetValue = focusedContainerColor,

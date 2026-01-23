@@ -7,6 +7,9 @@ import android.media.MediaFormat
 import android.os.Build
 import android.util.Log
 import android.view.Display
+import androidx.media3.common.C
+import androidx.media3.common.AudioAttributes
+import androidx.media3.exoplayer.audio.AudioCapabilities
 
 object CodecDetector {
     private const val TAG = "CodecDetector"
@@ -18,6 +21,7 @@ object CodecDetector {
     private var cachedHevcMain10Support: Boolean? = null
     private var cachedHdrCapabilities: HdrCapabilities? = null
     private var cachedDolbyVisionProfiles: List<String>? = null
+    private var cachedPassthroughAudioCodecs: List<String>? = null
 
     
 
@@ -50,6 +54,7 @@ object CodecDetector {
     data class DeviceCodecInfo(
         val videoCodecs: List<String>,
         val audioCodecs: List<String>,
+        val audioPassthroughCodecs: List<String>,
         val hdrCapabilities: HdrCapabilities,
         val dolbyVisionProfiles: List<String>,
         val hevcMain10: Boolean,
@@ -539,6 +544,7 @@ object CodecDetector {
         return DeviceCodecInfo(
             videoCodecs = getVideoCodecDisplayNames(),
             audioCodecs = getAudioCodecDisplayNames(),
+            audioPassthroughCodecs = getPassthroughAudioCodecs(context),
             hdrCapabilities = getHdrCapabilities(context),
             dolbyVisionProfiles = getDolbyVisionProfiles(),
             hevcMain10 = checkHevcMain10Support(),
@@ -662,5 +668,45 @@ object CodecDetector {
         }
 
         return getSupportedAudioCodecs().any { it.equals(mimeType, ignoreCase = true) }
+    }
+
+    fun getPassthroughAudioCodecs(context: Context): List<String> {
+        cachedPassthroughAudioCodecs?.let { return it }
+
+        val capabilities = AudioCapabilities.getCapabilities(
+            context,
+            AudioAttributes.DEFAULT,
+            null
+        )
+
+        val codecs = mutableListOf<String>()
+        if (capabilities.supportsEncoding(C.ENCODING_AC3)) {
+            codecs += "AC3"
+        }
+        if (capabilities.supportsEncoding(C.ENCODING_E_AC3)) {
+            codecs += "E-AC3"
+        }
+        if (capabilities.supportsEncoding(C.ENCODING_E_AC3_JOC)) {
+            codecs += "E-AC3 JOC"
+        }
+        if (capabilities.supportsEncoding(C.ENCODING_AC4)) {
+            codecs += "AC4"
+        }
+        if (capabilities.supportsEncoding(C.ENCODING_DTS)) {
+            codecs += "DTS"
+        }
+        if (capabilities.supportsEncoding(C.ENCODING_DTS_HD)) {
+            codecs += "DTS-HD"
+        }
+        if (capabilities.supportsEncoding(C.ENCODING_DTS_UHD_P2)) {
+            codecs += "DTS-UHD"
+        }
+        if (capabilities.supportsEncoding(C.ENCODING_DOLBY_TRUEHD)) {
+            codecs += "TrueHD"
+        }
+
+        val result = codecs.distinct()
+        cachedPassthroughAudioCodecs = result
+        return result
     }
 }

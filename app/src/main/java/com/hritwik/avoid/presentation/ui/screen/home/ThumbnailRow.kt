@@ -6,13 +6,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import com.hritwik.avoid.domain.model.library.MediaItem
 import com.hritwik.avoid.presentation.ui.components.media.MediaCardType
 import com.hritwik.avoid.presentation.ui.components.media.MediaItemCard
@@ -32,18 +27,9 @@ fun ThumbnailRow(
     onItemFocused: (MediaItem) -> Unit,
     onFocusedItemChange: (MediaItem?) -> Unit
 ) {
-    val firstItemFocusRequester = remember { FocusRequester() }
-    var hasBeenFocused by remember { mutableStateOf(false) }
-
     LazyRow(
         modifier = Modifier
-            .focusGroup()
-            .onFocusChanged { state ->
-                if (state.hasFocus && !hasBeenFocused) {
-                    hasBeenFocused = true
-                    firstItemFocusRequester.requestFocus()
-                }
-            },
+            .focusGroup(),
         horizontalArrangement = Arrangement.spacedBy(calculateRoundedValue(24).sdp),
         contentPadding = PaddingValues(horizontal = calculateRoundedValue(20).sdp)
     ) {
@@ -51,10 +37,10 @@ fun ThumbnailRow(
             items = items,
             key = { _, item -> item.id }
         ) { index, item ->
-            val focusRequester = when {
-                index != 0 -> null
-                contentFocusTarget == FeatureContentFocusTarget.Latest -> contentFocusRequester
-                else -> firstItemFocusRequester
+            val focusRequester = if (index == 0 && contentFocusTarget == FeatureContentFocusTarget.Latest) {
+                contentFocusRequester
+            } else {
+                null
             }
             val itemModifier = if (index == 0) {
                 Modifier.homeContentFocusProperties(
@@ -71,6 +57,7 @@ fun ThumbnailRow(
                 serverUrl = serverUrl,
                 cardType = MediaCardType.THUMBNAIL,
                 showProgress = false,
+                enableBringIntoView = true,
                 onClick = onItemSelected,
                 onFocus = {
                     onItemFocused(it)

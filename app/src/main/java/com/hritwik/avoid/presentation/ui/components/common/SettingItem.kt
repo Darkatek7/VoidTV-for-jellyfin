@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import com.hritwik.avoid.presentation.ui.theme.Minsk
 import com.hritwik.avoid.presentation.ui.common.dpadNavigation
 import com.hritwik.avoid.utils.helpers.calculateRoundedValue
@@ -190,7 +191,9 @@ fun SettingItem(
                 Text(
                     text = trailingText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.width(calculateRoundedValue(8).sdp))
             }
