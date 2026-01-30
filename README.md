@@ -9,6 +9,11 @@
 
 Built with **Kotlin** and **Jetpack Compose**
 
+[![Get it on Google Play](https://img.shields.io/badge/Google%20Play-Install%20now-green?logo=google-play&logoColor=white)](https://play.google.com/store/apps/details?id=com.hritwik.avoid)
+[![Available on Amazon Appstore](https://img.shields.io/badge/Amazon%20Appstore-Download-orange?logo=amazon&logoColor=white)](https://www.amazon.in/Hritwikjohri-Void/dp/B0G491KG2Y)
+[![Join us on Discord](https://img.shields.io/badge/Discord-Chat%20with%20us-%235865F2?logo=discord&logoColor=white)](https://discord.com/invite/vVHFXv7xVU)
+
+
 </div>
 
 ---
@@ -20,6 +25,9 @@ Built with **Kotlin** and **Jetpack Compose**
 - **Detailed media views** - See the version, HDR type (Dolby Vision/HDR10/HDR10+), and audio and subtitle codecs and languages on screen before starting playback.
 - **Theme song support** - Immersive experience with the theme song playing in the background.
 - **HDR fallback** - Option to turn off Dolby Vision if it is not supported by the device.
+- **mTLS support** -
+- **Dolby Vision Profile 7** - Support for direct play of Dolby Vision Profile 7 MEL
+- **Dolby Vision Profile 7** - Support for direct play Dolby Vision Profile 7 FEL (FEL layer is not processed. The FEL layer will be dropped and playback will use the base Dolby Vision layer with RPU,similar to Nvidia Shield)
 - **ASS subtitles support** - Thanks to MPV.
 - **Hi10P hardware decoding support** - On Fire 4K and Max devices.
 - **Skip intro support** - Using the media segment API.
