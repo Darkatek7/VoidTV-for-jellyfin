@@ -39,7 +39,7 @@ fun ControlsTimeoutDialog(
 ) {
     val minValue = 1
     val maxValue = 30
-    val initialValue = currentSeconds.coerceIn(minValue, maxValue)
+    val initialValue = (currentSeconds * 2).coerceIn(minValue, maxValue)
     var sliderValue by remember { mutableFloatStateOf(initialValue.toFloat()) }
     val sliderFocusRequester = remember { FocusRequester() }
     var sliderHasFocus by remember { mutableStateOf(false) }
@@ -58,7 +58,7 @@ fun ControlsTimeoutDialog(
     }
 
     fun sliderToSeconds(sliderValue: Float): Int {
-        return sliderValue.roundToInt()
+        return (sliderValue / 2).roundToInt()
     }
 
     SelectionDialog(
