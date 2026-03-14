@@ -243,7 +243,7 @@ fun LoginScreen(
                                         when (e.key) {
                                             Key.DirectionDown -> { signInFR.requestFocus(); true }
                                             Key.DirectionRight -> { changeServerFR.requestFocus(); true }
-                                            Key.DirectionUp -> true
+                                            Key.DirectionUp -> { passwordFR.requestFocus(); true }
                                             else -> false
                                         }
                                     } else false
@@ -251,7 +251,7 @@ fun LoginScreen(
                                 .focusProperties {
                                     down = signInFR
                                     right = changeServerFR
-                                    up = quickConnectFR
+                                    up = passwordFR
                                 }
                                 .focusable(),
                             shape = ButtonDefaults.outlinedShape,
@@ -277,7 +277,7 @@ fun LoginScreen(
                                             Key.DirectionDown -> { signInFR.requestFocus(); true }
                                             Key.DirectionLeft -> { quickConnectFR.requestFocus(); true }
                                             Key.DirectionRight -> { signInFR.requestFocus(); true }
-                                            Key.DirectionUp -> true
+                                            Key.DirectionUp -> { passwordFR.requestFocus(); true }
                                             else -> false
                                         }
                                     } else false
@@ -286,7 +286,7 @@ fun LoginScreen(
                                     down = signInFR
                                     left = quickConnectFR
                                     right = signInFR
-                                    up = changeServerFR
+                                    up = passwordFR
                                 }
                                 .focusable(),
                             shape = ButtonDefaults.outlinedShape,

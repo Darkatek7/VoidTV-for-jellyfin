@@ -218,13 +218,17 @@ fun MediaActionButtons(
     val playTrailer: () -> Unit = {
         localTrailers.firstOrNull()?.let { trailer ->
             val source = trailer.mediaSources.firstOrNull()
+            if (source == null) {
+                context.showToast("Trailer unavailable")
+                return@let
+            }
             val playbackInfo = PlaybackInfo(
                 mediaItem = trailer,
-                mediaSourceId = source?.id,
-                audioStreamIndex = source?.defaultAudioStream?.index,
-                subtitleStreamIndex = source?.defaultSubtitleStream?.index,
+                mediaSourceId = source.id,
+                audioStreamIndex = source.defaultAudioStream?.index,
+                subtitleStreamIndex = source.defaultSubtitleStream?.index,
                 startPosition = 0L,
-                maxBitrate = source?.bitrate
+                maxBitrate = source.bitrate
             )
             onPlayClick(playbackInfo)
         }
