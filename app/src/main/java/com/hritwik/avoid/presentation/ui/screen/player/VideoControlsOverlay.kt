@@ -114,6 +114,8 @@ fun VideoControlsOverlay(
     onSubtitleOptionsClick: (() -> Unit)? = null,
     videoQualityLabel: String? = null,
     onVideoClick: (() -> Unit)? = null,
+    playbackSpeed: Float = 1.0f,
+    onPlaybackSpeedClick: (() -> Unit)? = null,
     progressBarColor: Color = Minsk,
     seekProgressColor: Color? = null,
 ) {
@@ -126,6 +128,7 @@ fun VideoControlsOverlay(
     val skipButtonFocusRequester = remember { FocusRequester() }
     val floatingSkipButtonFocusRequester = remember { FocusRequester() }
     val audioFocusRequester = remember { FocusRequester() }
+    val playbackSpeedFocusRequester = remember { FocusRequester() }
     val subtitleFocusRequester = remember { FocusRequester() }
     val subtitleOptionsFocusRequester = remember { FocusRequester() }
     val videoFocusRequester = remember { FocusRequester() }
@@ -162,6 +165,7 @@ fun VideoControlsOverlay(
     var skipForwardFocused by remember { mutableStateOf(false) }
     var nextFocused by remember { mutableStateOf(false) }
     var audioFocused by remember { mutableStateOf(false) }
+    var playbackSpeedFocused by remember { mutableStateOf(false) }
     var subtitleFocused by remember { mutableStateOf(false) }
     var subtitleOptionsFocused by remember { mutableStateOf(false) }
     var videoFocused by remember { mutableStateOf(false) }
@@ -1086,7 +1090,9 @@ fun VideoControlsOverlay(
                                         } else {
                                             skipForwardFocusRequester
                                         }
-                                        right = if (onSubtitleClick != null) {
+                                        right = if (onPlaybackSpeedClick != null) {
+                                            playbackSpeedFocusRequester
+                                        } else if (onSubtitleClick != null) {
                                             subtitleFocusRequester
                                         } else if (onSubtitleOptionsClick != null) {
                                             subtitleOptionsFocusRequester
@@ -1113,6 +1119,63 @@ fun VideoControlsOverlay(
                             }
                         }
 
+                        if (onPlaybackSpeedClick != null) {
+                            val speedInteraction = remember { MutableInteractionSource() }
+                            val speedLabel = "${playbackSpeed}x"
+                            Box(
+                                modifier = Modifier
+                                    .focusedPill(playbackSpeedFocused)
+                                    .focusable()
+                                    .focusRequester(playbackSpeedFocusRequester)
+                                    .height(controlButtonSize)
+                                    .focusProperties {
+                                        up = FocusRequester.Cancel
+                                        down = progressBarFocusRequester
+                                        left = if (onAudioClick != null) {
+                                            audioFocusRequester
+                                        } else if (onVideoClick != null) {
+                                            videoFocusRequester
+                                        } else if (onPlayNext != null) {
+                                            nextEpisodeFocusRequester
+                                        } else {
+                                            skipForwardFocusRequester
+                                        }
+                                        right = if (onSubtitleClick != null) {
+                                            subtitleFocusRequester
+                                        } else if (onSubtitleOptionsClick != null) {
+                                            subtitleOptionsFocusRequester
+                                        } else if (skipButtonVisible && onSkipButtonClick != null) {
+                                            skipButtonFocusRequester
+                                        } else {
+                                            FocusRequester.Cancel
+                                        }
+                                    }
+                                    .onFocusChanged { focusState ->
+                                        playbackSpeedFocused = focusState.isFocused
+                                        if (focusState.isFocused) {
+                                            focusArea = VideoControlsFocusArea.CONTROLS
+                                            updateInteractionTime()
+                                        }
+                                    }
+                                    .clickable(
+                                        interactionSource = speedInteraction,
+                                        indication = null,
+                                        role = Role.Button
+                                    ) {
+                                        onPlaybackSpeedClick()
+                                        updateInteractionTime()
+                                    }
+                                    .padding(horizontal = calculateRoundedValue(12).sdp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = speedLabel,
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+
                         if (onSubtitleClick != null) {
                             IconButton(
                                 onClick = {
@@ -1127,7 +1190,9 @@ fun VideoControlsOverlay(
                                     .focusProperties {
                                         up = FocusRequester.Cancel
                                         down = progressBarFocusRequester
-                                        left = if (onAudioClick != null) {
+                                        left = if (onPlaybackSpeedClick != null) {
+                                            playbackSpeedFocusRequester
+                                        } else if (onAudioClick != null) {
                                             audioFocusRequester
                                         } else if (onVideoClick != null) {
                                             videoFocusRequester
@@ -1177,6 +1242,8 @@ fun VideoControlsOverlay(
                                         down = progressBarFocusRequester
                                         left = if (onSubtitleClick != null) {
                                             subtitleFocusRequester
+                                        } else if (onPlaybackSpeedClick != null) {
+                                            playbackSpeedFocusRequester
                                         } else if (onAudioClick != null) {
                                             audioFocusRequester
                                         } else if (onVideoClick != null) {
@@ -1250,19 +1317,21 @@ fun VideoControlsOverlay(
                                         .focusProperties {
                                             up = FocusRequester.Cancel
                                             down = progressBarFocusRequester
-                                            left = if (onSubtitleOptionsClick != null) {
-                                                subtitleOptionsFocusRequester
-                                            } else if (onSubtitleClick != null) {
-                                                subtitleFocusRequester
-                                            } else if (onAudioClick != null) {
-                                                audioFocusRequester
-                                            } else if (onVideoClick != null) {
-                                                videoFocusRequester
-                                            } else if (onPlayNext != null) {
-                                                nextEpisodeFocusRequester
-                                            } else {
-                                                skipForwardFocusRequester
-                                            }
+                                        left = if (onSubtitleOptionsClick != null) {
+                                            subtitleOptionsFocusRequester
+                                        } else if (onSubtitleClick != null) {
+                                            subtitleFocusRequester
+                                        } else if (onPlaybackSpeedClick != null) {
+                                            playbackSpeedFocusRequester
+                                        } else if (onAudioClick != null) {
+                                            audioFocusRequester
+                                        } else if (onVideoClick != null) {
+                                            videoFocusRequester
+                                        } else if (onPlayNext != null) {
+                                            nextEpisodeFocusRequester
+                                        } else {
+                                            skipForwardFocusRequester
+                                        }
                                             right = FocusRequester.Cancel
                                         }
                                         .onFocusChanged { focusState ->
@@ -1511,7 +1580,9 @@ private fun VideoControlsOverlayPreview() {
             onPlayNext = { },
             onAudioClick = { },
             onSubtitleClick = { },
-            onSubtitleOptionsClick = { }
+            onSubtitleOptionsClick = { },
+            playbackSpeed = 1.0f,
+            onPlaybackSpeedClick = { }
         )
     }
 }
