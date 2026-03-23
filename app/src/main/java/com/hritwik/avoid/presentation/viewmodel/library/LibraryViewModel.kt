@@ -459,7 +459,7 @@ class LibraryViewModel @Inject constructor(
                         )
                     }
                     is NetworkResult.Error -> {
-                        println("Failed to load latest items: ${latestItemsResult.message}")
+                        Logger.d("LibraryVM", "Failed to load latest items: ${latestItemsResult.message}")
                     }
                     is NetworkResult.Loading -> {}
                 }
@@ -471,7 +471,7 @@ class LibraryViewModel @Inject constructor(
                         )
                     }
                     is NetworkResult.Error -> {
-                        println("Failed to load resume items: ${resumeItemsResult.message}")
+                        Logger.d("LibraryVM", "Failed to load resume items: ${resumeItemsResult.message}")
                     }
                     is NetworkResult.Loading -> {}
                     null -> Unit
@@ -484,7 +484,7 @@ class LibraryViewModel @Inject constructor(
                         )
                     }
                     is NetworkResult.Error -> {
-                        println("Failed to load latest movies: ${latestMoviesResult.message}")
+                        Logger.d("LibraryVM", "Failed to load latest movies: ${latestMoviesResult.message}")
                     }
                     is NetworkResult.Loading -> {}
                 }
@@ -496,7 +496,7 @@ class LibraryViewModel @Inject constructor(
                         )
                     }
                     is NetworkResult.Error -> {
-                        println("Failed to load recently watched items: ${recentlyWatchedResult.message}")
+                        Logger.d("LibraryVM", "Failed to load recently watched items: ${recentlyWatchedResult.message}")
                     }
                     is NetworkResult.Loading -> {}
                 }
@@ -508,7 +508,7 @@ class LibraryViewModel @Inject constructor(
                         )
                     }
                     is NetworkResult.Error -> {
-                        println("Failed to load recommended items: ${recommendedItemsResult.message}")
+                        Logger.d("LibraryVM", "Failed to load recommended items: ${recommendedItemsResult.message}")
                     }
                     is NetworkResult.Loading -> {}
                 }
@@ -520,7 +520,7 @@ class LibraryViewModel @Inject constructor(
                         )
                     }
                     is NetworkResult.Error -> {
-                        println("Failed to load collections: ${collectionsResult.message}")
+                        Logger.d("LibraryVM", "Failed to load collections: ${collectionsResult.message}")
                     }
                     is NetworkResult.Loading -> {}
                 }
@@ -576,7 +576,7 @@ class LibraryViewModel @Inject constructor(
                     }
 
                     is NetworkResult.Error -> {
-                        println("Failed to load latest episodes: ${latestEpisodesResult.message}")
+                        Logger.d("LibraryVM", "Failed to load latest episodes: ${latestEpisodesResult.message}")
                     }
 
                     is NetworkResult.Loading -> {
@@ -593,7 +593,7 @@ class LibraryViewModel @Inject constructor(
                     }
 
                     is NetworkResult.Error -> {
-                        println("Failed to load recently released movies: ${recentlyReleasedMoviesResult.message}")
+                        Logger.d("LibraryVM", "Failed to load recently released movies: ${recentlyReleasedMoviesResult.message}")
                     }
 
                     is NetworkResult.Loading -> {
@@ -610,7 +610,7 @@ class LibraryViewModel @Inject constructor(
                     }
 
                     is NetworkResult.Error -> {
-                        println("Failed to load recently released shows: ${recentlyReleasedShowsResult.message}")
+                        Logger.d("LibraryVM", "Failed to load recently released shows: ${recentlyReleasedShowsResult.message}")
                     }
 
                     is NetworkResult.Loading -> {
@@ -627,7 +627,7 @@ class LibraryViewModel @Inject constructor(
                     }
 
                     is NetworkResult.Error -> {
-                        println("Failed to load next up episodes: ${nextUpResult.message}")
+                        Logger.d("LibraryVM", "Failed to load next up episodes: ${nextUpResult.message}")
                     }
 
                     is NetworkResult.Loading -> {
@@ -652,7 +652,7 @@ class LibraryViewModel @Inject constructor(
 
                         is NetworkResult.Error -> {
                             _libraryState.value = _libraryState.value.copy(showStudios = emptyList())
-                            println("Failed to load show studios: ${studiosResult.message}")
+                            Logger.d("LibraryVM", "Failed to load show studios: ${studiosResult.message}")
                         }
 
                         is NetworkResult.Loading -> {
@@ -681,7 +681,7 @@ class LibraryViewModel @Inject constructor(
 
                         is NetworkResult.Error -> {
                             _libraryState.value = _libraryState.value.copy(movieStudios = emptyList())
-                            println("Failed to load movie studios: ${studiosResult.message}")
+                            Logger.d("LibraryVM", "Failed to load movie studios: ${studiosResult.message}")
                         }
 
                         is NetworkResult.Loading -> {
@@ -909,7 +909,7 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
                 is NetworkResult.Error -> {
-                    println("Failed to refresh latest additions: ${result.message}")
+                    Logger.d("LibraryVM", "Failed to refresh latest additions: ${result.message}")
                 }
                 is NetworkResult.Loading -> {
                     
@@ -927,7 +927,7 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
                 is NetworkResult.Error -> {
-                    println("Failed to refresh resume items: ${result.message}")
+                    Logger.d("LibraryVM", "Failed to refresh resume items: ${result.message}")
                 }
                 is NetworkResult.Loading -> {
                     

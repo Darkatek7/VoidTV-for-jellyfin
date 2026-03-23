@@ -17,15 +17,24 @@ abstract class BaseUseCase<in P, R>(
             withContext(coroutineDispatcher) {
                 execute(parameters)
             }
-        } catch (e: Exception) {
-            val error = when (e) {
-                is IOException -> AppError.Network(e.message ?: "Network error")
-                is SecurityException -> AppError.Auth(e.message ?: "Authentication error")
-                is IllegalArgumentException -> AppError.Validation(e.message ?: "Validation error")
-                else -> AppError.Unknown(e.message ?: "Unknown error occurred")
-            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            val error = AppError.Network(e.message ?: "Network error")
             Logger.logError(error, e)
+            NetworkResult.Error<R>(error, e)
+        } catch (e: SecurityException) {
+            val error = AppError.Auth(e.message ?: "Authentication error")
+            Logger.logError(error, e)
+            NetworkResult.Error<R>(error, e)
+        } catch (e: IllegalArgumentException) {
+            val error = AppError.Validation(e.message ?: "Validation error")
+            Logger.logError(error, e)
+            NetworkResult.Error<R>(error, e)
+        } catch (e: Exception) {
+            Logger.e("BaseUseCase", "Unexpected error: ${e.message}", e)
             CrashReporter.report(e)
+            val error = AppError.Unknown(e.message ?: "Unknown error occurred")
             NetworkResult.Error<R>(error, e)
         }
     }

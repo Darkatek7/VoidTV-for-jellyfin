@@ -1399,7 +1399,7 @@ class VideoPlaybackViewModel @Inject constructor(
 
                 _state.value = _state.value.copy(lastSavedPosition = positionSeconds)
             } catch (e: Exception) {
-                println("Error saving playback position: ${e.message}")
+                Logger.d("VideoPlaybackVM", "Error saving playback position: ${e.message}")
             }
         }
     }
@@ -1425,7 +1425,7 @@ class VideoPlaybackViewModel @Inject constructor(
                 preferencesManager.clearPlaybackPosition(mediaId)
                 _state.value = _state.value.copy(isMarkedAsWatched = true)
             } catch (e: Exception) {
-                println("Error marking as watched: ${e.message}")
+                Logger.d("VideoPlaybackVM", "Error marking as watched: ${e.message}")
             }
         }
     }
@@ -1441,7 +1441,7 @@ class VideoPlaybackViewModel @Inject constructor(
                 )
                 _state.value = _state.value.copy(playbackStartReported = true)
             } catch (e: Exception) {
-                println("Error reporting playback start: ${e.message}")
+                Logger.d("VideoPlaybackVM", "Error reporting playback start: ${e.message}")
             }
         }
     }
@@ -1477,7 +1477,7 @@ class VideoPlaybackViewModel @Inject constructor(
                 _state.value = _state.value.copy(playbackStopReported = true)
                 scheduleResumeRefresh(userId, accessToken, immediate = true)
             } catch (e: Exception) {
-                println("Error reporting playback stop: ${e.message}")
+                Logger.d("VideoPlaybackVM", "Error reporting playback stop: ${e.message}")
             }
         }
     }
@@ -1560,7 +1560,7 @@ class VideoPlaybackViewModel @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            println("Error fetching on deck items: ${e.message}")
+            Logger.d("VideoPlaybackVM", "Error fetching on deck items: ${e.message}")
             _state.value = _state.value.copy(onDeckItems = emptyList())
         }
     }

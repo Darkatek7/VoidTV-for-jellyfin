@@ -1,7 +1,6 @@
 package com.hritwik.avoid.di
 
 import android.content.Context
-import com.hritwik.avoid.data.local.PreferencesManager
 import com.hritwik.avoid.data.network.CdnInterceptor
 import com.hritwik.avoid.data.network.LocalNetworkSslHelper
 import com.hritwik.avoid.data.network.MtlsCertificateProvider
@@ -111,14 +110,6 @@ object AppModule {
     @Singleton
     fun provideConnectionPool(): ConnectionPool {
         return ConnectionPool(5, 5, TimeUnit.MINUTES)
-    }
-
-    @Provides
-    @Singleton
-    fun providePreferencesManager(
-        @ApplicationContext context: Context
-    ): PreferencesManager {
-        return PreferencesManager(context)
     }
 
     @Provides
