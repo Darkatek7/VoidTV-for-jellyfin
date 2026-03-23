@@ -204,7 +204,6 @@ class VoidApplication : Application() {
 
     private fun initializePreferences() {
         applicationScope.launch(crashHandler + Dispatchers.IO) {
-            preferencesManager.initializeThemePreferences()
             val lang = preferencesManager.getPreferredLanguage().first()
             withContext(Dispatchers.Main) { applyPersonalization(lang) }
         }

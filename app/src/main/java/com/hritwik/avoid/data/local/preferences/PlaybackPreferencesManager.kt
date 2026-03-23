@@ -24,7 +24,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.playbackDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "playback_preferences"
+    name = PreferenceConstants.DATASTORE_NAME
 )
 
 @Singleton

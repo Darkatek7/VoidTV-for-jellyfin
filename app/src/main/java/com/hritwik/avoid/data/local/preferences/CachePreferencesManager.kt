@@ -19,7 +19,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.cacheDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "cache_preferences"
+    name = PreferenceConstants.DATASTORE_NAME
 )
 
 @Singleton

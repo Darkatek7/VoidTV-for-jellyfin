@@ -3,9 +3,7 @@ package com.hritwik.avoid.data.local
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.hritwik.avoid.data.local.model.PlaybackPreferences
 import com.hritwik.avoid.data.local.preferences.AuthPreferencesManager
@@ -38,10 +36,6 @@ class PreferencesManager @Inject constructor(
 ) {
     private val dataStore = context.dataStore
 
-    companion object {
-        private val DEVICE_ID = stringPreferencesKey(PreferenceConstants.KEY_DEVICE_ID)
-    }
-
     fun isLoggedIn(): Flow<Boolean> = combine(
         authPreferencesManager.getAccessToken(),
         authPreferencesManager.getUserId(),
@@ -56,19 +50,6 @@ class PreferencesManager @Inject constructor(
 
     suspend fun clearAllPreferences() {
         dataStore.edit { it.clear() }
-    }
-
-    fun getDeviceId(): Flow<String?> = dataStore.data.map { preferences ->
-        preferences[DEVICE_ID]
-    }
-
-    suspend fun saveDeviceId(deviceId: String) {
-        dataStore.edit { preferences ->
-            preferences[DEVICE_ID] = deviceId
-        }
-    }
-
-    fun initializeThemePreferences() {
     }
 
     private fun resolvePreferHdrOverDolbyVisionDefault(): Boolean {

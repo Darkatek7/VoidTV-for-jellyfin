@@ -25,7 +25,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.serverDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "server_preferences"
+    name = PreferenceConstants.DATASTORE_NAME
 )
 
 @Singleton
@@ -59,10 +59,10 @@ class ServerPreferencesManager @Inject constructor(
         private val MTLS_CERTIFICATE_PASSWORD = stringPreferencesKey(PreferenceConstants.KEY_MTLS_CERTIFICATE_PASSWORD)
         private val OFFLINE_MODE = booleanPreferencesKey(PreferenceConstants.KEY_OFFLINE_MODE)
 
-        private const val TINK_KEYSET_PREF = "void_tink_keyset_server"
-        private const val TINK_KEYSET_NAME = "tink_keyset_server"
-        private const val TINK_MASTER_KEY_URI = "android-keystore://void_tink_master_key_server"
-        private const val AEAD_ASSOCIATED_DATA_MTLS = "mtls_certificate_server"
+        private const val TINK_KEYSET_PREF = "void_tink_keyset"
+        private const val TINK_KEYSET_NAME = "tink_keyset"
+        private const val TINK_MASTER_KEY_URI = "android-keystore://void_tink_master_key"
+        private const val AEAD_ASSOCIATED_DATA_MTLS = "mtls_certificate"
     }
 
     suspend fun saveServerConfig(url: String, name: String) {

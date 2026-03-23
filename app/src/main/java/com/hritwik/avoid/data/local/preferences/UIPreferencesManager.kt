@@ -17,7 +17,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.uiDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "ui_preferences"
+    name = PreferenceConstants.DATASTORE_NAME
 )
 
 @Singleton

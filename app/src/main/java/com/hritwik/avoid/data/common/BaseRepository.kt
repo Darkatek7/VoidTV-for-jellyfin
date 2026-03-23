@@ -38,6 +38,9 @@ abstract class BaseRepository(
                     serverUrl?.let { url -> serverConnectionManager.markRequestSuccess(url) }
                     return@withContext NetworkResult.Success(result)
                 } catch (throwable: Throwable) {
+                    if (throwable is CancellationException) {
+                        throw throwable
+                    }
                     if (throwable is IOException) {
                         NetworkRetryThrottler.onFailure()
                     }
