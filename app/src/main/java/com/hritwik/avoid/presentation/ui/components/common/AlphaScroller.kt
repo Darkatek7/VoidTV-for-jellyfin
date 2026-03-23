@@ -123,14 +123,14 @@ fun AlphaScroller(
                             
                             
                             if (e !is kotlinx.coroutines.CancellationException) {
-                                println("AlphaScroller: Failed to scroll to index $idx for letter '$letter': ${e.message}")
+                                Logger.d("AlphaScroller", "Failed to scroll to index $idx for letter '$letter': ${e.message}")
                             }
                         }
                     }
                 }
             }
         } catch (e: Exception) {
-            println("AlphaScroller: Error in jumpTo for letter '$letter': ${e.message}")
+            Logger.d("AlphaScroller", "Error in jumpTo for letter '$letter': ${e.message}")
         }
     }
 
@@ -322,14 +322,14 @@ fun AlphaScrollerWithSections(
                             
                             
                             if (e !is kotlinx.coroutines.CancellationException) {
-                                println("AlphaScrollerWithSections: Failed to scroll to header $headerIdx for letter '$letter': ${e.message}")
+                                Logger.d("AlphaScroller", "Failed to scroll to header $headerIdx for letter '$letter': ${e.message}")
                             }
                         }
                     }
                 }
             }
         } catch (e: Exception) {
-            println("AlphaScrollerWithSections: Error in jumpToHeader for letter '$letter': ${e.message}")
+            Logger.d("AlphaScroller", "Error in jumpToHeader for letter '$letter': ${e.message}")
         }
     }
 

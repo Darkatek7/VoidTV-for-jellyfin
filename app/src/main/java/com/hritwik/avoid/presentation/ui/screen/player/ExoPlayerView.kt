@@ -1218,7 +1218,9 @@ fun ExoPlayerView(
                     null
                 },
                 videoQualityLabel = playerState.playbackTranscodeOption.label,
-                onVideoClick = { viewModel.showVideoQualityDialog() }
+                onVideoClick = { viewModel.showVideoQualityDialog() },
+                playbackSpeed = playerState.playbackSpeed,
+                onPlaybackSpeedClick = { showPlaybackSpeedDialog = true }
             )
 
 

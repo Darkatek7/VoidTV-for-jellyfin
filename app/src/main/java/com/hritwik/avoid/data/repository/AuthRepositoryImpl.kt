@@ -511,10 +511,10 @@ class AuthRepositoryImpl @Inject constructor(
                     activeConnection = activeMethod
                 )
 
-                println("📱 Retrieved saved server config: ${server.name} v${server.version}")
+                Logger.i("AuthRepo", "Retrieved saved server config: ${server.name} v${server.version}")
                 server
             } else {
-                println("📱 No saved server config found")
+                Logger.i("AuthRepo", "No saved server config found")
                 null
             }
         }

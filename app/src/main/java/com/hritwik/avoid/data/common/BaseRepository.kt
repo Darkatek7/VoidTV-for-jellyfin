@@ -4,8 +4,10 @@ import com.hritwik.avoid.data.connection.ServerConnectionManager
 import com.hritwik.avoid.data.network.PriorityDispatcher
 import com.hritwik.avoid.data.network.NetworkRetryThrottler
 import com.hritwik.avoid.domain.error.AppError
+import com.hritwik.avoid.utils.Logger
 import com.hritwik.avoid.utils.constants.AppConstants
 import com.hritwik.avoid.utils.CrashReporter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +38,9 @@ abstract class BaseRepository(
                     serverUrl?.let { url -> serverConnectionManager.markRequestSuccess(url) }
                     return@withContext NetworkResult.Success(result)
                 } catch (throwable: Throwable) {
+                    if (throwable is CancellationException) {
+                        throw throwable
+                    }
                     if (throwable is IOException) {
                         NetworkRetryThrottler.onFailure()
                     }
@@ -50,7 +55,6 @@ abstract class BaseRepository(
                         currentDelay *= 2
                         attempt++
                     } else {
-                        CrashReporter.report(throwable)
                         val (errorMessage, appError) = when (throwable) {
                             is IOException -> "Network error. Please check your connection." to AppError.Network(
                                 "Network error. Please check your connection."
@@ -72,6 +76,8 @@ abstract class BaseRepository(
                                 message to appErrorForCode
                             }
                             else -> {
+                                Logger.e("BaseRepository", "Unexpected error: ${throwable.message}", throwable)
+                                CrashReporter.report(throwable)
                                 val message = "Unknown error: ${throwable.message}"
                                 message to AppError.Unknown(message)
                             }
@@ -106,7 +112,10 @@ abstract class BaseRepository(
             try {
                 val result = safeApiCall(serverUrl, apiCall)
                 deferred.complete(result)
+            } catch (e: CancellationException) {
+                deferred.completeExceptionally(e)
             } catch (e: Exception) {
+                Logger.e("BaseRepository", "Error executing API call: ${e.message}", e)
                 CrashReporter.report(e)
                 val message = "Error executing API call: ${e.message}"
                 deferred.complete(NetworkResult.Error<T>(AppError.Unknown(message), e))

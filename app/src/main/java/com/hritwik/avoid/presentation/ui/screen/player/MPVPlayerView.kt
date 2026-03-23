@@ -1047,7 +1047,9 @@ fun MpvPlayerView(
             onSubtitleClick = { showSubtitleDialog = true },
             onSubtitleOptionsClick = { showSubtitleMenu = true },
             videoQualityLabel = playerState.playbackTranscodeOption.label,
-            onVideoClick = { videoPlaybackViewModel.showVideoQualityDialog() }
+            onVideoClick = { videoPlaybackViewModel.showVideoQualityDialog() },
+            playbackSpeed = playerState.playbackSpeed,
+            onPlaybackSpeedClick = { showPlaybackSpeedDialog = true }
         )
 
 

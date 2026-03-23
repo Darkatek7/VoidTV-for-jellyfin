@@ -2,3 +2,11 @@
 /.gradle/
 .DS_Store
 .idea/
+
+# Build outputs
+build/
+local.properties
+*.iml
+
+# Gradle
+gradle.properties
