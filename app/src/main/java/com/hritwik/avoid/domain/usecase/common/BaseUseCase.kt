@@ -5,6 +5,7 @@ import com.hritwik.avoid.domain.error.AppError
 import com.hritwik.avoid.utils.Logger
 import com.hritwik.avoid.utils.CrashReporter
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,20 +23,20 @@ abstract class BaseUseCase<in P, R>(
         } catch (e: IOException) {
             val error = AppError.Network(e.message ?: "Network error")
             Logger.logError(error, e)
-            NetworkResult.Error<R>(error, e)
+            return@invoke NetworkResult.Error<R>(error, e)
         } catch (e: SecurityException) {
             val error = AppError.Auth(e.message ?: "Authentication error")
             Logger.logError(error, e)
-            NetworkResult.Error<R>(error, e)
+            return@invoke NetworkResult.Error<R>(error, e)
         } catch (e: IllegalArgumentException) {
             val error = AppError.Validation(e.message ?: "Validation error")
             Logger.logError(error, e)
-            NetworkResult.Error<R>(error, e)
+            return@invoke NetworkResult.Error<R>(error, e)
         } catch (e: Exception) {
             Logger.e("BaseUseCase", "Unexpected error: ${e.message}", e)
             CrashReporter.report(e)
             val error = AppError.Unknown(e.message ?: "Unknown error occurred")
-            NetworkResult.Error<R>(error, e)
+            return@invoke NetworkResult.Error<R>(error, e)
         }
     }
 
